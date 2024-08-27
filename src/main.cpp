@@ -1,11 +1,14 @@
 // Copyright 2024, Evangelion Manuhutu
 
-#include "window.h"
-#include "vulkan_context.h"
-#include "vulkan_wrapper.h"
+#include "core/window.h"
+#include "vulkan/vulkan_context.h"
+#include "vulkan/vulkan_wrapper.h"
+#include "core/logger.h"
 
 int main()
 {
+    Logger::init();
+
     Window window = Window(800, 400, "Vulkan");
     VulkanContext vk = VulkanContext(window.get_native_window());
 
@@ -19,19 +22,21 @@ int main()
     {
         command_buffers.resize(image_count);
         vk.create_command_buffers(image_count, command_buffers.data());
-        printf("Command buffers created\n");
+        LOG_INFO("Command buffers created");
     };
 
     auto record_command_buffers = [&]()
     {
-        VkClearColorValue clear_color = { 1.0f, 0.0f, 0.0f, 0.0f };
         VkClearValue clear_value;
-        clear_value.color = clear_color;
+        clear_value.color.float32[0] = 1.0f;
+        clear_value.color.float32[1] = 1.0f;
+        clear_value.color.float32[2] = 1.0f;
+        clear_value.color.float32[3] = 1.0f;
 
         VkRect2D render_area = { { 0, 0 }, { static_cast<u32>(window.get_width()), static_cast<u32>(window.get_height()) }};
         VkRenderPassBeginInfo render_pass_begin_info = {};
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        render_pass_begin_info.pNext = VK_NULL_HANDLE;
+        render_pass_begin_info.pNext = nullptr;
         render_pass_begin_info.renderPass = render_pass;
         render_pass_begin_info.renderArea = render_area;
         render_pass_begin_info.clearValueCount = 1;
@@ -44,11 +49,11 @@ int main()
             vkCmdBeginRenderPass(command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
             vkCmdEndRenderPass(command_buffers[i]);
-            VkResult result = vkEndCommandBuffer(command_buffers[i]);
-            vk_error_check(result);
+            const VkResult result = vkEndCommandBuffer(command_buffers[i]);
+            VK_ERROR_CHECK(result, "[vkEndCommandBuffer] Failed to end command buffer");
         }
 
-        printf("Command buffers recorded\n");
+        LOG_INFO("Command buffers recorded");
     };
 
     create_frame_buffers();

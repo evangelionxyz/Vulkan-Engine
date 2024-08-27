@@ -2,7 +2,7 @@
 #ifndef VULKAN_PHYSICAL_DEVICE_H
 #define VULKAN_PHYSICAL_DEVICE_H
 
-#include "types.h"
+#include "core/types.h"
 #include <vulkan/vulkan.h>
 #include <vector>
 

@@ -3,7 +3,7 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
-#include "GLFW/glfw3.h"
+#include "glfw/include/GLFW/glfw3.h"
 #include "types.h"
 
 struct WindowData

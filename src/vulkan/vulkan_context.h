@@ -40,7 +40,7 @@ private:
 
     GLFWwindow* m_Window               = nullptr;
     VkInstance m_Instance              = VK_NULL_HANDLE;
-    VkDevice m_Device                  = VK_NULL_HANDLE;
+    VkDevice m_LogicalDevice                  = VK_NULL_HANDLE;
     VulkanQueue m_Queue;
     uint32_t m_QueueFamily             = 0;
     VkSurfaceKHR m_Surface             = VK_NULL_HANDLE;

@@ -9,7 +9,7 @@ VulkanQueue::VulkanQueue(VkDevice device, VkSwapchainKHR swapchain, VkAllocation
     : m_Device(device), m_Swapchain(swapchain), m_Allocator(allocator)
 {
     vkGetDeviceQueue(m_Device, queue_family_index, queue_index, &m_Queue);
-    printf("[Vulkan Queue] Queue Acquired\n");
+    LOG_INFO("[Vulkan Queue] Queue Acquired");
     create_semaphores();
 }
 
@@ -18,7 +18,7 @@ u32 VulkanQueue::acquired_next_image() const
     u32 image_index = 0;
     const VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain,
         UINT64_MAX, m_PresentCompleteSemaphore, nullptr, &image_index);
-    vk_error_check(result);
+    VK_ERROR_CHECK(result, "[vkAcquireNextImageKHR] Failed to acquired image at index {0}", image_index);
     return image_index;
 }
 
@@ -36,7 +36,7 @@ void VulkanQueue::submit_sync(VkCommandBuffer cmd) const
     submit_info.pSignalSemaphores    = VK_NULL_HANDLE;
 
     VkResult result = vkQueueSubmit(m_Queue, 1, &submit_info, nullptr);
-    vk_error_check(result);
+    VK_ERROR_CHECK(result, "[vkQueueSubmit] Failed to submit");
 }
 
 void VulkanQueue::submit_async(VkCommandBuffer cmd) const
@@ -55,7 +55,7 @@ void VulkanQueue::submit_async(VkCommandBuffer cmd) const
     submit_info.pSignalSemaphores    = &m_RenderCompleteSemaphore;
 
     const VkResult result = vkQueueSubmit(m_Queue, 1, &submit_info, nullptr);
-    vk_error_check(result);
+    VK_ERROR_CHECK(result, "[vkQueueSubmit] Failed to submit");
 }
 
 void VulkanQueue::present(const u32 image_index) const
@@ -71,7 +71,7 @@ void VulkanQueue::present(const u32 image_index) const
 
     const VkResult result = vkQueuePresentKHR(m_Queue, &present_info);
     wait_idle();
-    vk_error_check(result);
+    VK_ERROR_CHECK(result, "[vkQueuePresentKHR] Failed to present");
 }
 
 void VulkanQueue::wait_idle() const

@@ -3,7 +3,7 @@
 #define VULKAN_QUEUE_H
 
 #include <vulkan/vulkan.h>
-#include "types.h"
+#include "core/types.h"
 
 class VulkanQueue {
 public:

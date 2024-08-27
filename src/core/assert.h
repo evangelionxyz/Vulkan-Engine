@@ -4,28 +4,29 @@
 #define ASSERT_H
 
 #include <cstdio>
+#include "logger.h"
 
-#ifdef _DEBUG
+#ifdef VK_DEBUG
 #   ifdef _WIN32
 #       define DEBUG_BREAK() __debugbreak()
 #   else
 #       define DEBUG_BREAK() __builtin_trap()
 #   endif
+#else
+#       define DEBUG_BREAK()
 #endif
 
-
-#ifdef _DEBUG
+#ifdef VK_DEBUG
 #   define ASSERT(condition, ...)\
     do {\
         if (!(condition)) {\
-            fprintf(stderr, "Assertion failed at '%s' at line %d\n", __FILE__, __LINE__);\
-            fprintf(stderr, __VA_ARGS__);\
-            fprintf(stderr,"\n\n");\
+            LOG_ERROR("Assertion failed at '{0}' at line {1}\n", __FILE__, __LINE__);\
+            LOG_ERROR(__VA_ARGS__);\
             DEBUG_BREAK();\
         }\
     } while(0)
 #else
-#   define ASSERT(condition, ...)
+#   define ASSERT(...)
 #endif
 
 #endif //ASSERT_H

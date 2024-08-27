@@ -4,14 +4,16 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-#include "assert.h"
+#include "core/assert.h"
+#include "core/logger.h"
 
-static void vk_error_check(const VkResult result)
-{
-    if (result != VK_SUCCESS)
-    {
-        fprintf(stderr, "VkResult failed in %s at line %d\n", __FILE__, __LINE__);
-    }
+#define VK_ERROR_CHECK(result, ...)\
+{\
+    if (result != VK_SUCCESS){\
+        LOG_ERROR("Vulkan Error at {0}: {1}", __FILE__, __LINE__);\
+        LOG_ERROR(__VA_ARGS__);\
+        DEBUG_BREAK();\
+    }\
 }
 
 static VkPresentModeKHR vk_choose_present_mode(const std::vector<VkPresentModeKHR> &present_modes)
@@ -54,7 +56,7 @@ static void vk_begin_command_buffer(VkCommandBuffer cmd, VkCommandBufferUsageFla
     begin_info.pInheritanceInfo = VK_NULL_HANDLE;
 
     VkResult result = vkBeginCommandBuffer(cmd, &begin_info);
-    vk_error_check(result);
+    VK_ERROR_CHECK(result, "[vkBeginCommandBuffer] Failed to begin command buffer");
 }
 
 static VkSemaphore vk_create_semaphore(VkDevice device, VkAllocationCallbacks *allocator)
@@ -66,8 +68,8 @@ static VkSemaphore vk_create_semaphore(VkDevice device, VkAllocationCallbacks *a
 
     VkSemaphore semaphore = VK_NULL_HANDLE;
     VkResult result = vkCreateSemaphore(device, &semaphore_info, allocator, &semaphore);
-    vk_error_check(result);
-    ASSERT(semaphore != VK_NULL_HANDLE, "Semaphore is null");
+    VK_ERROR_CHECK(result, "[vkCreateSemaphore] Failed to create semaphore");
+    ASSERT(semaphore != VK_NULL_HANDLE, "[vkCreateSemaphore] Semaphore is null");
 
     return semaphore;
 }
@@ -96,8 +98,8 @@ static VkImageView vk_create_image_view(const VkDevice device, const VkImage ima
     };
 
     VkImageView view = VK_NULL_HANDLE;
-    VkResult result = vkCreateImageView(device, &view_info, allocator, &view);
-    vk_error_check(result);
+    const VkResult result = vkCreateImageView(device, &view_info, allocator, &view);
+    VK_ERROR_CHECK(result, "[vkCreateImageView] Failed to create image view");
     return view;
 }
 
@@ -127,15 +129,14 @@ static const char *vk_get_debug_type(const VkDebugUtilsMessageTypeFlagsEXT flags
 static VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
     VkDebugUtilsMessageTypeFlagsEXT type, const VkDebugUtilsMessengerCallbackDataEXT *p_callback_data, void *p_user_data)
 {
-    printf("Debug callback: %s\n", p_callback_data->pMessage);
-    printf("\tSeverity %s\n", vk_get_debug_severity_str(message_severity));
-    printf("\tType %s\n", vk_get_debug_type(message_severity));
-    printf("\tObjects ");
+    LOG_INFO("Debug callback: {}", p_callback_data->pMessage);
+    LOG_INFO("\tSeverity {}", vk_get_debug_severity_str(message_severity));
+    LOG_INFO("\tType {}", vk_get_debug_type(message_severity));
+    LOG_INFO("\tObjects ");
     for (u32 i = 0; i < p_callback_data->objectCount; i++)
     {
-        printf("%lu ", p_callback_data->pObjects[i].objectHandle);
+        LOG_INFO("%lu ", p_callback_data->pObjects[i].objectHandle);
     }
-    printf("\n");
 
     return VK_FALSE;
 }
@@ -144,31 +145,31 @@ static void vk_print_image_usage_flags(const VkImageUsageFlags usage)
 {
     if (usage & VK_IMAGE_USAGE_SAMPLED_BIT)
     {
-        printf("Sampled is supported\n");
+        LOG_INFO("Sampled is supported");
     }
     else if (usage & VK_IMAGE_USAGE_STORAGE_BIT)
     {
-        printf("Storage is supported\n");
+        LOG_INFO("Storage is supported");
     }
     else if (usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
     {
-        printf("Input attachment is supported\n");
+        LOG_INFO("Input attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
     {
-        printf("Depth stencil attachment is supported\n");
+        LOG_INFO("Depth stencil attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
     {
-        printf("Color attachment is supported\n");
+        LOG_INFO("Color attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
     {
-        printf("Transfer dst is supported\n");
+        LOG_INFO("Transfer dst is supported");
     }
     else if (usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
     {
-        printf("Transfer src is supported\n");
+        LOG_INFO("Transfer src is supported");
     }
 }
 
@@ -176,27 +177,27 @@ static void vk_print_memory_property(VkMemoryPropertyFlags properties)
 {
     if (properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     {
-        printf("DEVICE LOCAL ");
+        LOG_INFO("DEVICE LOCAL ");
     }
     else if (properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     {
-        printf("HOST VISIBLE ");
+        LOG_INFO("HOST VISIBLE ");
     }
     else if (properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     {
-        printf("HOST COHERENT ");
+        LOG_INFO("HOST COHERENT ");
     }
     else if (properties & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
     {
-        printf("HOST CACHED ");
+        LOG_INFO("HOST CACHED ");
     }
     else if (properties & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
     {
-        printf("LAZILY ALLOCATED ");
+        LOG_INFO("LAZILY ALLOCATED ");
     }
     else if (properties & VK_MEMORY_PROPERTY_PROTECTED_BIT)
     {
-        printf("PROTECTED ");
+        LOG_INFO("PROTECTED ");
     }
 }
 
