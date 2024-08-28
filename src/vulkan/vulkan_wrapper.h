@@ -10,7 +10,7 @@
 #define VK_ERROR_CHECK(result, ...)\
 {\
     if (result != VK_SUCCESS){\
-        LOG_ERROR("Vulkan Error at {0}: {1}", __FILE__, __LINE__);\
+        LOG_ERROR("[Vulkan] Assertion failed at {0}: line {1}", __FILE__, __LINE__);\
         LOG_ERROR(__VA_ARGS__);\
         DEBUG_BREAK();\
     }\
@@ -67,15 +67,14 @@ static VkSemaphore vk_create_semaphore(VkDevice device, VkAllocationCallbacks *a
     semaphore_info.pNext = VK_NULL_HANDLE;
 
     VkSemaphore semaphore = VK_NULL_HANDLE;
-    VkResult result = vkCreateSemaphore(device, &semaphore_info, allocator, &semaphore);
-    VK_ERROR_CHECK(result, "[Vulkan] Failed to create semaphore");
+    VK_ERROR_CHECK(vkCreateSemaphore(device, &semaphore_info, allocator, &semaphore), "[Vulkan] Failed to create semaphore");
     ASSERT(semaphore != VK_NULL_HANDLE, "[Vulkan] Semaphore is null");
 
     return semaphore;
 }
 
-static VkImageView vk_create_image_view(const VkDevice device, const VkImage image, VkAllocationCallbacks *allocator, VkFormat format, VkImageAspectFlags aspect_flags,
-    VkImageViewType view_type, u32 layer_count, u32 mip_levels)
+static VkImageView vk_create_image_view(const VkDevice device, const VkImage image, VkAllocationCallbacks *allocator,
+    VkFormat format, VkImageAspectFlags aspect_flags, VkImageViewType view_type, u32 layer_count, u32 mip_levels)
 {
     VkImageViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

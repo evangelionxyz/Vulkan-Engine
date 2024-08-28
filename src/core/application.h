@@ -17,14 +17,14 @@ public:
     void run();
 
 private:
+    void record_command_buffer(VkCommandBuffer command_buffer, u32 image_index) const;
     void create_command_buffers();
-    void record_command_buffers() const;
+
     void present() const;
 
     std::vector<VkFramebuffer> m_Framebuffers;
     std::vector<VkCommandBuffer> m_CommandBuffers;
     VkRenderPass m_RenderPass = VK_NULL_HANDLE;
-
     Scope<Window> m_Window;
     Ref<VulkanContext> m_Vk;
 };

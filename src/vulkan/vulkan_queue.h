@@ -16,8 +16,10 @@ public:
     void submit_async(VkCommandBuffer cmd) const;
     void present(u32 image_index) const;
     void wait_idle() const;
-    void destroy_semaphores() const;
-    [[nodiscard]] VkQueue get_queue() const;
+    void destroy() const;
+    void wait_and_reset_fences() const;
+
+    [[nodiscard]] VkQueue get_vk_queue() const;
 
 private:
     void create_semaphores();
@@ -25,9 +27,11 @@ private:
     VkDevice m_Device                      = VK_NULL_HANDLE;
     VkQueue m_Queue                        = VK_NULL_HANDLE;
     VkSwapchainKHR m_Swapchain             = VK_NULL_HANDLE;
-    VkSemaphore m_RenderCompleteSemaphore  = VK_NULL_HANDLE;
-    VkSemaphore m_PresentCompleteSemaphore = VK_NULL_HANDLE;
+    VkSemaphore m_ImageAvailableSemaphore  = VK_NULL_HANDLE;
+    VkSemaphore m_RenderFinishedSemaphore  = VK_NULL_HANDLE;
+    VkFence m_InFlightFence                = VK_NULL_HANDLE;
     VkAllocationCallbacks *m_Allocator     = VK_NULL_HANDLE;
+    mutable u32 m_ImageIndex               = 0;
 };
 
 #endif //VULKAN_QUEUE_H

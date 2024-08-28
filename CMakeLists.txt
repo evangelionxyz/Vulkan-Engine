@@ -25,6 +25,8 @@ add_executable(Vulkan
     src/core/logger.cpp
     src/core/application.cpp
     src/core/application.h
+    src/vulkan/vulkan_swapchain.cpp
+    src/vulkan/vulkan_swapchain.h
 )
 
 add_dependencies(Vulkan GLFW IMGUI)
