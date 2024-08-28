@@ -9,7 +9,7 @@ include(third_party/cmakefiles/glfw.cmake)
 include(third_party/cmakefiles/imgui.cmake)
 
 add_executable(Vulkan
-    src/main.cpp
+    src/vulkan_engine.cpp
     src/core/window.cpp
     src/core/window.h
     src/vulkan/vulkan_context.cpp
@@ -23,6 +23,8 @@ add_executable(Vulkan
     src/vulkan/vulkan_queue.h
     src/core/logger.h
     src/core/logger.cpp
+    src/core/application.cpp
+    src/core/application.h
 )
 
 add_dependencies(Vulkan GLFW IMGUI)
@@ -30,10 +32,8 @@ target_link_libraries(Vulkan PRIVATE GLFW IMGUI)
 
 target_include_directories(Vulkan PRIVATE
     src
-    ${TP_DIR}/glfw/include
-    ${TP_DIR}/spdlog/include
-    ${TP_DIR}/imgui
     ${TP_DIR}
+    ${TP_DIR}/glfw/include
 )
 
 target_compile_definitions(Vulkan PRIVATE GLFW_INCLUDE_NONE)

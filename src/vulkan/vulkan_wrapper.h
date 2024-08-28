@@ -56,7 +56,7 @@ static void vk_begin_command_buffer(VkCommandBuffer cmd, VkCommandBufferUsageFla
     begin_info.pInheritanceInfo = VK_NULL_HANDLE;
 
     VkResult result = vkBeginCommandBuffer(cmd, &begin_info);
-    VK_ERROR_CHECK(result, "[vkBeginCommandBuffer] Failed to begin command buffer");
+    VK_ERROR_CHECK(result, "[Vulkan] Failed to begin command buffer");
 }
 
 static VkSemaphore vk_create_semaphore(VkDevice device, VkAllocationCallbacks *allocator)
@@ -68,8 +68,8 @@ static VkSemaphore vk_create_semaphore(VkDevice device, VkAllocationCallbacks *a
 
     VkSemaphore semaphore = VK_NULL_HANDLE;
     VkResult result = vkCreateSemaphore(device, &semaphore_info, allocator, &semaphore);
-    VK_ERROR_CHECK(result, "[vkCreateSemaphore] Failed to create semaphore");
-    ASSERT(semaphore != VK_NULL_HANDLE, "[vkCreateSemaphore] Semaphore is null");
+    VK_ERROR_CHECK(result, "[Vulkan] Failed to create semaphore");
+    ASSERT(semaphore != VK_NULL_HANDLE, "[Vulkan] Semaphore is null");
 
     return semaphore;
 }
@@ -99,7 +99,7 @@ static VkImageView vk_create_image_view(const VkDevice device, const VkImage ima
 
     VkImageView view = VK_NULL_HANDLE;
     const VkResult result = vkCreateImageView(device, &view_info, allocator, &view);
-    VK_ERROR_CHECK(result, "[vkCreateImageView] Failed to create image view");
+    VK_ERROR_CHECK(result, "[Vulkan] Failed to create image view");
     return view;
 }
 
@@ -145,31 +145,31 @@ static void vk_print_image_usage_flags(const VkImageUsageFlags usage)
 {
     if (usage & VK_IMAGE_USAGE_SAMPLED_BIT)
     {
-        LOG_INFO("Sampled is supported");
+        LOG_INFO("\t[Vulkan] Sampled is supported");
     }
     else if (usage & VK_IMAGE_USAGE_STORAGE_BIT)
     {
-        LOG_INFO("Storage is supported");
+        LOG_INFO("\t[Vulkan] Storage is supported");
     }
     else if (usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
     {
-        LOG_INFO("Input attachment is supported");
+        LOG_INFO("\t[Vulkan] Input attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
     {
-        LOG_INFO("Depth stencil attachment is supported");
+        LOG_INFO("\t[Vulkan] Depth stencil attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
     {
-        LOG_INFO("Color attachment is supported");
+        LOG_INFO("\t[Vulkan] Color attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
     {
-        LOG_INFO("Transfer dst is supported");
+        LOG_INFO("\t[Vulkan] Transfer dst is supported");
     }
     else if (usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
     {
-        LOG_INFO("Transfer src is supported");
+        LOG_INFO("\t[Vulkan] Transfer src is supported");
     }
 }
 

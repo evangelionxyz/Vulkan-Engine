@@ -14,6 +14,7 @@ public:
     ~VulkanContext();
 
     VkRenderPass create_render_pass() const;
+    void destroy_render_pass(VkRenderPass render_pass) const;
 
     std::vector<VkFramebuffer> create_framebuffers(VkRenderPass render_pass) const;
     void destroy_framebuffers(const std::vector<VkFramebuffer> &frame_buffers) const;
@@ -31,7 +32,7 @@ public:
     [[nodiscard]] u32 get_queue_family() const;
 
     void create_command_buffers(u32 count, VkCommandBuffer *command_buffers) const;
-    void free_command_buffers(u32 count, const VkCommandBuffer *command_buffers);
+    void free_command_buffers(std::vector<VkCommandBuffer> &command_buffers) const;
 
     VkAllocationCallbacks *get_allocator();
 
