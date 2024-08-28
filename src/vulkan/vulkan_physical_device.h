@@ -19,6 +19,9 @@ struct PhysicalDevice
     VkPhysicalDeviceFeatures Features;
 };
 
+using VkSurfaceFormats = std::vector<VkSurfaceFormatKHR>;
+using VkPresentModes = std::vector<VkPresentModeKHR>;
+
 class VulkanPhysicalDevice {
 public:
     VulkanPhysicalDevice() = default;
@@ -27,6 +30,9 @@ public:
     const PhysicalDevice& get_selected_device() const;
 
 private:
+    static VkSurfaceFormats get_surface_format(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
+    static VkPresentModes get_surface_present_modes(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
+
     std::vector<PhysicalDevice> m_Devices;
     i32 m_DeviceIndex = -1;
 };

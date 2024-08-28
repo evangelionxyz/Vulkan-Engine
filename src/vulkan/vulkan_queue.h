@@ -10,13 +10,14 @@ public:
     VulkanQueue() = default;
     explicit VulkanQueue(VkDevice device, VkSwapchainKHR swapchain, VkAllocationCallbacks *allocator, u32 queue_family_index, u32 queue_index);
 
-    u32 acquired_next_image() const;
+    [[nodiscard]] u32 acquired_next_image() const;
 
     void submit_sync(VkCommandBuffer cmd) const;
     void submit_async(VkCommandBuffer cmd) const;
     void present(u32 image_index) const;
     void wait_idle() const;
     void destroy_semaphores() const;
+    [[nodiscard]] VkQueue get_queue() const;
 
 private:
     void create_semaphores();
@@ -28,7 +29,5 @@ private:
     VkSemaphore m_PresentCompleteSemaphore = VK_NULL_HANDLE;
     VkAllocationCallbacks *m_Allocator     = VK_NULL_HANDLE;
 };
-
-
 
 #endif //VULKAN_QUEUE_H

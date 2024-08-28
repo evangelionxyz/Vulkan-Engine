@@ -14,19 +14,20 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, const VkSurfaceK
     LOG_INFO("Found {0} Physical Devices", device_count);
 
     m_Devices.resize(device_count);
-    std::vector<VkPhysicalDevice> devices(device_count);
+    std::vector<VkPhysicalDevice> temp_devices(device_count);
 
-    result = vkEnumeratePhysicalDevices(instance, &device_count, devices.data());
+    result = vkEnumeratePhysicalDevices(instance, &device_count, temp_devices.data());
     VK_ERROR_CHECK(result, "[vkEnumeratePhysicalDevices] Failed to enumerate devices");
 
     for (u32 device_index = 0; device_index < device_count; device_index++)
     {
-        VkPhysicalDevice physical_device = devices[device_index];
+        VkPhysicalDevice physical_device = temp_devices[device_index];
         m_Devices[device_index].PhysDevice = physical_device;
+        PhysicalDevice &current_device = m_Devices[device_index];
 
-        vkGetPhysicalDeviceProperties(physical_device, &m_Devices[device_index].Properties);
-        LOG_INFO("Device name: {0}", m_Devices[device_index].Properties.deviceName);
-        u32 apiVersion = m_Devices[device_index].Properties.apiVersion;
+        vkGetPhysicalDeviceProperties(physical_device, &current_device.Properties);
+        LOG_INFO("Device name: {0}", current_device.Properties.deviceName);
+        u32 apiVersion = current_device.Properties.apiVersion;
         LOG_INFO("\tAPI Version {0}.{1}.{2}.{3}",
             VK_API_VERSION_VARIANT(apiVersion),
             VK_API_VERSION_MAJOR(apiVersion),
@@ -37,15 +38,15 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, const VkSurfaceK
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, nullptr);
         LOG_INFO("\tQueue Family Count: {0}", queue_families_count);
 
-        m_Devices[device_index].QueueFamilyProperties.resize(queue_families_count);
-        m_Devices[device_index].QueueSupportPresent.resize(queue_families_count);
+        current_device.QueueFamilyProperties.resize(queue_families_count);
+        current_device.QueueSupportPresent.resize(queue_families_count);
 
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count,
-            m_Devices[device_index].QueueFamilyProperties.data());
+            current_device.QueueFamilyProperties.data());
 
         for (u32 queue_index = 0; queue_index < queue_families_count; queue_index++)
         {
-            const VkQueueFamilyProperties& queue_family_properties = m_Devices[device_index].QueueFamilyProperties[queue_index];
+            const VkQueueFamilyProperties& queue_family_properties = current_device.QueueFamilyProperties[queue_index];
             LOG_INFO("\tFamily {0} Num Queues: {1}", queue_index, queue_families_count);
             VkQueueFlags flags = queue_family_properties.queueFlags;
             LOG_INFO("\tGFX {0}, Compute {1}, Transfer {2}, Sparse binding {3}",
@@ -54,55 +55,26 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, const VkSurfaceK
                 (flags & VK_QUEUE_TRANSFER_BIT) ? "Yes" : "No",
                 (flags & VK_QUEUE_SPARSE_BINDING_BIT) ? "Yes" : "No"
             );
-
             result = vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, queue_index, surface,
-                &m_Devices[device_index].QueueSupportPresent[queue_index]);
+                &current_device.QueueSupportPresent[queue_index]);
             VK_ERROR_CHECK(result, "[vkGetPhysicalDeviceSurfaceSupportKHR] Failed to get physical surface supoort");
         }
 
         // get physical surface format
-        u32 format_count = 0;
-        result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, nullptr);
-        VK_ERROR_CHECK(result, "[vkGetPhysicalDeviceSurfaceFormatsKHR] Failed to get physical surface format count");
-        ASSERT(format_count, "[Vulkan Physical Device] Could not get surface format count");
+        m_Devices[device_index].SurfaceFormats = get_surface_format(physical_device, surface);
 
-        m_Devices[device_index].SurfaceFormats.resize(format_count);
-        result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count,
-            m_Devices[device_index].SurfaceFormats.data());
-        VK_ERROR_CHECK(result, "[vkGetPhysicalDeviceSurfaceFormatsKHR] Failed to get physical surface format");
-
-        // create surface capabilities
-        result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &m_Devices[device_index].SurfaceCapabilities);
+        // get surface capabilities
+        result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &current_device.SurfaceCapabilities);
         VK_ERROR_CHECK(result, "[vkGetPhysicalDeviceSurfaceCapabilitiesKHR] Failed to get surface capabilities");
 
-        vk_print_image_usage_flags(m_Devices[device_index].SurfaceCapabilities.supportedUsageFlags);
+        vk_print_image_usage_flags(current_device.SurfaceCapabilities.supportedUsageFlags);
 
-        // create Present Mode
-        u32 present_mode_count = 0;
-        result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, nullptr);
-        VK_ERROR_CHECK(result, "[vkGetPhysicalDeviceSurfacePresentModesKHR] Failed to get present mode count");
-        ASSERT(present_mode_count, "[Vulkan Physical Device] Could not get physical device surface present mode");
+        // get present modes
+        current_device.PresentModes = get_surface_present_modes(physical_device, surface);
 
-        m_Devices[device_index].PresentModes.resize(present_mode_count);
-        result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count,
-            m_Devices[device_index].PresentModes.data());
-        VK_ERROR_CHECK(result, "[vlGetPhysicalDeviceSurfacePresentModeKHR] Failed to get physical device surface");
-
-        LOG_INFO("\tPresent Modes Count: {0}", present_mode_count);
-
-        vkGetPhysicalDeviceMemoryProperties(physical_device, &m_Devices[device_index].MemoryProperties);
-
-        LOG_INFO("Num memory types: {0}", m_Devices[device_index].MemoryProperties.memoryTypeCount);
-        for (u32 memory_index = 0; memory_index < m_Devices[device_index].MemoryProperties.memoryTypeCount; memory_index++)
-        {
-            LOG_INFO("{0}: flags {1} heap {2} ", memory_index,
-                m_Devices[device_index].MemoryProperties.memoryTypes[memory_index].propertyFlags,
-                m_Devices[device_index].MemoryProperties.memoryTypes[memory_index].heapIndex);
-            vk_print_memory_property(m_Devices[device_index].MemoryProperties.memoryTypes[memory_index].propertyFlags);
-        }
-
-        LOG_INFO("Heap types count: {0}", m_Devices[device_index].MemoryProperties.memoryHeapCount);
-        vkGetPhysicalDeviceFeatures(m_Devices[device_index].PhysDevice, &m_Devices[device_index].Features);
+        // get memory properties and features
+        vkGetPhysicalDeviceMemoryProperties(physical_device, &current_device.MemoryProperties);
+        vkGetPhysicalDeviceFeatures(current_device.PhysDevice, &current_device.Features);
     }
 }
 
@@ -131,4 +103,33 @@ const PhysicalDevice& VulkanPhysicalDevice::get_selected_device() const
 {
     ASSERT(m_DeviceIndex >= 0, "[Vulkan Physical Device] A physical device has not been selected");
     return m_Devices[m_DeviceIndex];
+}
+
+VkSurfaceFormats VulkanPhysicalDevice::get_surface_format(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
+{
+    u32 format_count = 0;
+    VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, nullptr);
+    VK_ERROR_CHECK(result, "[vkGetPhysicalDeviceSurfaceFormatsKHR] Failed to get physical surface format count");
+    ASSERT(format_count, "[Vulkan Physical Device] Could not get surface format count");
+    VkSurfaceFormats surface_formats(format_count);
+    result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count,
+        surface_formats.data());
+    VK_ERROR_CHECK(result, "[vkGetPhysicalDeviceSurfaceFormatsKHR] Failed to get physical surface format");
+    return surface_formats;
+}
+
+VkPresentModes VulkanPhysicalDevice::get_surface_present_modes(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
+{
+    u32 present_mode_count = 0;
+    VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, nullptr);
+    VK_ERROR_CHECK(result, "[vkGetPhysicalDeviceSurfacePresentModesKHR] Failed to get present mode count");
+    ASSERT(present_mode_count, "[Vulkan Physical Device] Could not get physical device surface present mode");
+
+    VkPresentModes present_modes(present_mode_count);
+    result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count,
+        present_modes.data());
+    VK_ERROR_CHECK(result, "[vlGetPhysicalDeviceSurfacePresentModeKHR] Failed to get physical device surface");
+    LOG_INFO("\tPresent Modes Count: {0}", present_mode_count);
+
+    return present_modes;
 }

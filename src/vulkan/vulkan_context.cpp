@@ -19,12 +19,15 @@ VulkanContext::VulkanContext(GLFWwindow* window)
     create_device();
     create_swapchain();
     create_command_pool();
-
+    create_descriptor_pool();
     m_Queue = VulkanQueue(m_LogicalDevice, m_Swapchain, m_Allocator, m_QueueFamily, 0);
 }
 
 VulkanContext::~VulkanContext()
 {
+    // destroy descriptor pool
+    vkDestroyDescriptorPool(m_LogicalDevice, m_DescriptorPool, m_Allocator);
+
     // destroy command  pool
     vkDestroyCommandPool(m_LogicalDevice, m_CommandPool, m_Allocator);
     LOG_INFO("[Vulkan Context] Command pool destroyed");
@@ -63,10 +66,10 @@ VulkanContext::~VulkanContext()
     LOG_INFO("[Vulkan Context] Instance destroyed");
 }
 
-std::vector<VkFramebuffer> VulkanContext::create_framebuffers(VkRenderPass render_pass)
+std::vector<VkFramebuffer> VulkanContext::create_framebuffers(const VkRenderPass render_pass) const
 {
-    std::vector<VkFramebuffer> framebuffers;
-    framebuffers.resize(m_SwapchainImages.size());
+    std::vector<VkFramebuffer> frame_buffers;
+    frame_buffers.resize(m_SwapchainImages.size());
     i32 width, height;
     glfwGetFramebufferSize(m_Window, &width, &height);
     for (size_t i = 0; i < m_SwapchainImages.size(); i++)
@@ -79,14 +82,14 @@ std::vector<VkFramebuffer> VulkanContext::create_framebuffers(VkRenderPass rende
         framebuffer_create_info.layers          = 1;
         framebuffer_create_info.attachmentCount = 1;
         framebuffer_create_info.pAttachments    = &m_SwapchainImageViews[i];
-        VK_ERROR_CHECK(vkCreateFramebuffer(m_LogicalDevice, &framebuffer_create_info, m_Allocator, &framebuffers[i]),
+        VK_ERROR_CHECK(vkCreateFramebuffer(m_LogicalDevice, &framebuffer_create_info, m_Allocator, &frame_buffers[i]),
             "[vkCreateFramebuffer] Failed to create framebuffer");
     }
     LOG_INFO("[Vulkan Context] Framebuffers created");
-    return framebuffers;
+    return frame_buffers;
 }
 
-VkRenderPass VulkanContext::create_render_pass()
+VkRenderPass VulkanContext::create_render_pass() const
 {
     VkAttachmentDescription color_attachment = {};
     color_attachment.format         = m_SwapchainSurfaceFormat.format;
@@ -102,22 +105,22 @@ VkRenderPass VulkanContext::create_render_pass()
     color_attachment_ref.attachment = 0;
     color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &color_attachment_ref;
-    subpass.pInputAttachments = nullptr;
-    subpass.preserveAttachmentCount = 0;
-    subpass.pPreserveAttachments = nullptr;
-    subpass.pResolveAttachments = nullptr;
-    subpass.pDepthStencilAttachment = nullptr;
+    VkSubpassDescription sub_pass = {};
+    sub_pass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    sub_pass.colorAttachmentCount = 1;
+    sub_pass.pColorAttachments = &color_attachment_ref;
+    sub_pass.pInputAttachments = nullptr;
+    sub_pass.preserveAttachmentCount = 0;
+    sub_pass.pPreserveAttachments = nullptr;
+    sub_pass.pResolveAttachments = nullptr;
+    sub_pass.pDepthStencilAttachment = nullptr;
 
     VkRenderPassCreateInfo render_pass_info = {};
     render_pass_info.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     render_pass_info.attachmentCount = 1;
     render_pass_info.pAttachments    = &color_attachment;
     render_pass_info.subpassCount    = 1;
-    render_pass_info.pSubpasses      = &subpass;
+    render_pass_info.pSubpasses      = &sub_pass;
 
     VkRenderPass render_pass = VK_NULL_HANDLE;
     VK_ERROR_CHECK(vkCreateRenderPass(m_LogicalDevice, &render_pass_info, m_Allocator, &render_pass),
@@ -127,13 +130,33 @@ VkRenderPass VulkanContext::create_render_pass()
     return render_pass;
 }
 
-void VulkanContext::destroy_framebuffers(const std::vector<VkFramebuffer> &framebuffers)
+void VulkanContext::destroy_framebuffers(const std::vector<VkFramebuffer> &frame_buffers) const
 {
-    for (const auto framebuffer : framebuffers)
+    for (const auto framebuffer : frame_buffers)
         vkDestroyFramebuffer(m_LogicalDevice, framebuffer, m_Allocator);
 }
 
-VkDevice VulkanContext::get_logical_device()
+VkInstance VulkanContext::get_instance() const
+{
+    return m_Instance;
+}
+
+VkPhysicalDevice VulkanContext::get_physical_device() const
+{
+    return m_PhysicalDevice.get_selected_device().PhysDevice;
+}
+
+VkDescriptorPool VulkanContext::get_descriptor_pool()
+{
+    return m_DescriptorPool;
+}
+
+VkPipelineCache VulkanContext::get_pipeline_cache() const
+{
+    return m_PipelineCache;
+}
+
+VkDevice VulkanContext::get_logical_device() const
 {
     return m_LogicalDevice;
 }
@@ -143,7 +166,7 @@ i32 VulkanContext::get_image_count() const
     return static_cast<i32>(m_SwapchainImages.size());
 }
 
-const VkImage& VulkanContext::get_image(i32 index)
+const VkImage& VulkanContext::get_image(i32 index) const
 {
     return m_SwapchainImages[index];
 }
@@ -158,7 +181,7 @@ u32 VulkanContext::get_queue_family() const
     return m_QueueFamily;
 }
 
-void VulkanContext::create_command_buffers(u32 count, VkCommandBuffer* command_buffers)
+void VulkanContext::create_command_buffers(u32 count, VkCommandBuffer* command_buffers) const
 {
     VkCommandBufferAllocateInfo alloc_info = {};
     alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -217,7 +240,7 @@ void VulkanContext::create_instance()
     create_info.enabledLayerCount       = std::size(layers);
     create_info.ppEnabledLayerNames     = layers;
 
-    VkResult res = vkCreateInstance(&create_info, m_Allocator, &m_Instance);
+    const VkResult res = vkCreateInstance(&create_info, m_Allocator, &m_Instance);
     VK_ERROR_CHECK(res, "[vkCreateInstance] Failed to create instance");
     LOG_INFO("[Vulkan Context] Vulkan instance created");
 }
@@ -238,17 +261,18 @@ void VulkanContext::create_debug_callback()
     msg_create_info.pUserData       = VK_NULL_HANDLE;
 
     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessenger = VK_NULL_HANDLE;
-    vkCreateDebugUtilsMessenger = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT");
+    vkCreateDebugUtilsMessenger = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+        vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT"));
     ASSERT(vkCreateDebugUtilsMessenger, "[Vulkan Context] Cannot find address of vkCreateDebugUtilsMessenger");
 
-    VkResult result = vkCreateDebugUtilsMessenger(m_Instance, &msg_create_info, m_Allocator, &m_DebugMessenger);
+    const VkResult result = vkCreateDebugUtilsMessenger(m_Instance, &msg_create_info, m_Allocator, &m_DebugMessenger);
     VK_ERROR_CHECK(result, "[vkCreateDebugUtilsMessengerEXT] Failed to create debug messenger");
     LOG_INFO("[Vulkan Context] Debug utils messenger created");
 }
 
 void VulkanContext::create_window_surface()
 {
-    VkResult res = glfwCreateWindowSurface(m_Instance, m_Window, m_Allocator, &m_Surface);
+    const VkResult res = glfwCreateWindowSurface(m_Instance, m_Window, m_Allocator, &m_Surface);
     VK_ERROR_CHECK(res, "[glfwCreateWindowSurface] Failed to create window surface");
     LOG_INFO("[Vulkan Context] Window surface created");
 }
@@ -265,14 +289,10 @@ void VulkanContext::create_device()
     const char *device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME };
 
     if (m_PhysicalDevice.get_selected_device().Features.geometryShader == VK_FALSE)
-    {
         LOG_ERROR("[Vulkan Context] Geometry shader is not supported");
-    }
 
     if (m_PhysicalDevice.get_selected_device().Features.tessellationShader == VK_FALSE)
-    {
         LOG_ERROR("[Vulkan Context] Tesselation shader is not supported");
-    }
 
     VkPhysicalDeviceFeatures device_features = { 0 };
     device_features.geometryShader = VK_TRUE;
@@ -292,7 +312,7 @@ void VulkanContext::create_device()
 
     const VkResult result = vkCreateDevice(m_PhysicalDevice.get_selected_device().PhysDevice, &create_info, m_Allocator, &m_LogicalDevice);
     VK_ERROR_CHECK(result, "[vkCreateDevice] Failed to create logical device");
-    LOG_INFO("[Vulkan Context] Logical device created\n");
+    LOG_INFO("[Vulkan Context] Logical device created");
 }
 
 void VulkanContext::create_swapchain()
@@ -300,12 +320,11 @@ void VulkanContext::create_swapchain()
     i32 width, height;
     glfwGetFramebufferSize(m_Window, &width, &height);
     VkSurfaceCapabilitiesKHR capabilities = m_PhysicalDevice.get_selected_device().SurfaceCapabilities;
-    VkExtent2D swapchain_extent = { static_cast<u32>(width), static_cast<u32>(height) };
+    const VkExtent2D swapchain_extent = { static_cast<u32>(width), static_cast<u32>(height) };
     capabilities.currentExtent.width = std::clamp(swapchain_extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
     capabilities.currentExtent.height = std::clamp(swapchain_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
-    u32 image_count = vk_choose_images_count(capabilities);
-
+    const u32 image_count = vk_choose_images_count(capabilities);
     const std::vector<VkPresentModeKHR> &present_modes = m_PhysicalDevice.get_selected_device().PresentModes;
     const VkPresentModeKHR present_mode = vk_choose_present_mode(present_modes);
 
@@ -330,7 +349,7 @@ void VulkanContext::create_swapchain()
 
     VkResult result = vkCreateSwapchainKHR(m_LogicalDevice, &swapchain_create_info, m_Allocator, &m_Swapchain);
     VK_ERROR_CHECK(result, "[vkCreateSwapchainKHR] Failed to create swapchain");
-    LOG_INFO("[Vulkan Context] Swapchain created\n");
+    LOG_INFO("[Vulkan Context] Swapchain created");
 
     // create swapchain images
     u32 swapchain_image_count = 0;
@@ -346,14 +365,14 @@ void VulkanContext::create_swapchain()
     result = vkGetSwapchainImagesKHR(m_LogicalDevice, m_Swapchain, &swapchain_image_count, m_SwapchainImages.data());
     VK_ERROR_CHECK(result, "[vkGetSwapchainImagesKHR] Failed to get swapchain images");
 
-    i32 layer_count = 1;
-    i32 mip_levels = 1;
     for (u32 i = 0; i < swapchain_image_count; ++i)
     {
+        constexpr i32 mip_levels = 1;
+        constexpr i32 layer_count = 1;
         m_SwapchainImageViews[i] = vk_create_image_view(m_LogicalDevice, m_SwapchainImages[i], m_Allocator,
-            m_SwapchainSurfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, layer_count, mip_levels);
+                                                        m_SwapchainSurfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT,
+                                                        VK_IMAGE_VIEW_TYPE_2D, layer_count, mip_levels);
     }
-
 }
 
 void VulkanContext::create_command_pool()
@@ -361,9 +380,36 @@ void VulkanContext::create_command_pool()
     VkCommandPoolCreateInfo pool_create_info = {};
     pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     pool_create_info.queueFamilyIndex = m_QueueFamily;
+    VK_ERROR_CHECK(vkCreateCommandPool(m_LogicalDevice, &pool_create_info, m_Allocator, &m_CommandPool),
+        "[vkCreateCommandPool] Failed to create command pool");
 
-    VkResult result = vkCreateCommandPool(m_LogicalDevice, &pool_create_info, m_Allocator, &m_CommandPool);
-    VK_ERROR_CHECK(result, "[vkCreateCommandPool] Failed to create command pool");
+    LOG_INFO("[Vulkan Context] Command buffer created");
+}
 
-    LOG_INFO("[Vulkan Context] Command buffer created\n");
+void VulkanContext::create_descriptor_pool()
+{
+    const VkDescriptorPoolSize pool_sizes[] =
+    {
+    { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+    { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+    { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+    };
+
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets       = 1000 * std::size(pool_sizes);
+    pool_info.poolSizeCount = std::size(pool_sizes);
+    pool_info.pPoolSizes    = pool_sizes;
+
+    VK_ERROR_CHECK(vkCreateDescriptorPool(m_LogicalDevice, &pool_info, m_Allocator, &m_DescriptorPool),
+        "[vkCreateCommandPool] Failed to create command pool");
 }

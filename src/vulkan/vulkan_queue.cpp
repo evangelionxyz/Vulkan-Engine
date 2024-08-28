@@ -85,6 +85,11 @@ void VulkanQueue::destroy_semaphores() const
     vkDestroySemaphore(m_Device, m_RenderCompleteSemaphore, m_Allocator);
 }
 
+VkQueue VulkanQueue::get_queue() const
+{
+    return m_Queue;
+}
+
 void VulkanQueue::create_semaphores()
 {
     m_PresentCompleteSemaphore = vk_create_semaphore(m_Device, m_Allocator);

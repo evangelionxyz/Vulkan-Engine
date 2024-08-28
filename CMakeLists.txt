@@ -6,7 +6,7 @@ set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(TP_DIR ${ROOT_DIR}/third_party)
 
 include(third_party/cmakefiles/glfw.cmake)
-include(third_party/cmakefiles/spdlog.cmake)
+include(third_party/cmakefiles/imgui.cmake)
 
 add_executable(Vulkan
     src/main.cpp
@@ -21,17 +21,18 @@ add_executable(Vulkan
     src/core/types.h
     src/vulkan/vulkan_queue.cpp
     src/vulkan/vulkan_queue.h
-    src/core/logger.cpp
     src/core/logger.h
+    src/core/logger.cpp
 )
 
-add_dependencies(Vulkan GLFW SPDLOG)
-target_link_libraries(Vulkan PRIVATE GLFW SPDLOG)
+add_dependencies(Vulkan GLFW IMGUI)
+target_link_libraries(Vulkan PRIVATE GLFW IMGUI)
 
 target_include_directories(Vulkan PRIVATE
     src
     ${TP_DIR}/glfw/include
     ${TP_DIR}/spdlog/include
+    ${TP_DIR}/imgui
     ${TP_DIR}
 )
 
@@ -50,7 +51,7 @@ elseif (LINUX)
     target_link_directories(Vulkan PRIVATE /usr/lib)
     target_link_libraries(Vulkan PRIVATE
         vulkan shaderc_shared spirv-cross-core spirv-cross-glsl
-        pthread dl m rt
+        pthread dl m rt fmt
     )
 endif()
 
