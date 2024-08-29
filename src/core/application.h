@@ -25,7 +25,6 @@ private:
 
     std::vector<VkFramebuffer> m_Framebuffers;
     std::vector<VkCommandBuffer> m_CommandBuffers;
-    VkRenderPass m_RenderPass = VK_NULL_HANDLE;
     Scope<Window> m_Window;
     Ref<VulkanContext> m_Vk;
     Ref<VulkanShader> m_Shader;

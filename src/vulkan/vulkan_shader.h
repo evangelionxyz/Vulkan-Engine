@@ -21,11 +21,13 @@ public:
     VulkanShader(const std::filesystem::path& vertex_shader_path, const std::filesystem::path& fragment_shader_path);
     ~VulkanShader();
 
-    [[nodiscard]] VkShaderModule create_module(const std::vector<u32>& code) const;
+    [[nodiscard]] static VkShaderModule create_module(const std::vector<u32>& code) ;
 private:
-    [[nodiscard]] std::string read_file(const std::filesystem::path& file_path) const;
+    [[nodiscard]] static std::string read_file(const std::filesystem::path& file_path) ;
     static std::vector<u32> compile_or_get_vulkan_binaries(const std::string &shader_source, const std::string &file_path, VkShaderStageFlagBits stage) ;
     static void reflect(VkShaderStageFlagBits shader_stage, const std::vector<u32> &code);
+
+    std::vector<VkShaderModule> m_Modules;
 };
 
 #endif //VULKAN_SHADER_H

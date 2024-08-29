@@ -64,6 +64,8 @@ void VulkanQueue::present(const u32 image_index) const
     present_info.swapchainCount = 1u;
     present_info.pSwapchains = &m_Swapchain;
     present_info.pImageIndices = &image_index;
+    present_info.pResults = VK_NULL_HANDLE;
+
     vkQueuePresentKHR(m_Queue, &present_info);
 }
 

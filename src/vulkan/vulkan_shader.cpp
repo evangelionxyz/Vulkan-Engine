@@ -25,7 +25,7 @@ static void create_cached_directory_if_needed()
     }
 }
 
-static shaderc_shader_kind vulkan_shader_to_shaderc_kind(VkShaderStageFlagBits stage)
+static shaderc_shader_kind vulkan_shader_to_shaderc_kind(const VkShaderStageFlagBits stage)
 {
     switch (stage)
     {
@@ -37,7 +37,7 @@ static shaderc_shader_kind vulkan_shader_to_shaderc_kind(VkShaderStageFlagBits s
     }
 }
 
-static std::string vulkan_shader_stage_str(VkShaderStageFlagBits stage)
+static std::string vulkan_shader_stage_str(const VkShaderStageFlagBits stage)
 {
     switch (stage)
     {
@@ -50,7 +50,7 @@ static std::string vulkan_shader_stage_str(VkShaderStageFlagBits stage)
     }
 }
 
-static std::string vulkan_shader_stage_extension(VkShaderStageFlagBits stage)
+static std::string vulkan_shader_stage_extension(const VkShaderStageFlagBits stage)
 {
     switch (stage)
     {
@@ -67,8 +67,8 @@ VulkanShader::VulkanShader(const std::filesystem::path& vertex_shader_path,
                            const std::filesystem::path& fragment_shader_path)
 {
     create_cached_directory_if_needed();
-    std::string vertex_shader_source = read_file(vertex_shader_path);
-    std::string fragment_shader_source = read_file(fragment_shader_path);
+    const std::string vertex_shader_source = read_file(vertex_shader_path);
+    const std::string fragment_shader_source = read_file(fragment_shader_path);
 
     std::unordered_map<VkShaderStageFlagBits, std::vector<u32>> vulkan_shader;
     vulkan_shader[VK_SHADER_STAGE_VERTEX_BIT] = compile_or_get_vulkan_binaries(vertex_shader_source, vertex_shader_path, VK_SHADER_STAGE_VERTEX_BIT);
@@ -83,15 +83,19 @@ VulkanShader::VulkanShader(const std::filesystem::path& vertex_shader_path,
         shader_create_info.stage = stage;
         shader_create_info.module = shader_module;
         shader_create_info.pName = "main";
-        vkDestroyShaderModule(vk_context->get_vk_logical_device(), shader_module, vk_context->get_vk_allocator());
+        vk_context->push_shader_create_info(stage, shader_create_info);
+        m_Modules.push_back(shader_module);
     }
 }
 
 VulkanShader::~VulkanShader()
 {
+    VulkanContext *vk_context = VulkanContext::get_instance();
+    for (const auto &module : m_Modules)
+        vkDestroyShaderModule(vk_context->get_vk_logical_device(), module, vk_context->get_vk_allocator());
 }
 
-VkShaderModule VulkanShader::create_module(const std::vector<u32>& code) const
+VkShaderModule VulkanShader::create_module(const std::vector<u32>& code)
 {
     VkShaderModuleCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -105,7 +109,7 @@ VkShaderModule VulkanShader::create_module(const std::vector<u32>& code) const
     return module;
 }
 
-std::string VulkanShader::read_file(const std::filesystem::path& file_path) const
+std::string VulkanShader::read_file(const std::filesystem::path& file_path)
 {
     std::string result;
     std::ifstream shader_in(file_path.string(), std::ios::binary);
