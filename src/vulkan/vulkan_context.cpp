@@ -7,8 +7,44 @@
 #include "vulkan_wrapper.h"
 #include "core/assert.h"
 
-static VulkanContext *s_Instance = nullptr;
+static VkBool32 vk_debug_messenger_callback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
+    const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
+    void*                                            pUserData)
+{
+    LOG_INFO("[Vulkan Message]:");
+    // Determine the message severity level
+    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        LOG_ERROR("\tVulkan: {0}", pCallbackData->pMessage);
+    }
+    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+        LOG_WARN("\tVulkan: {0}", pCallbackData->pMessage);
+    }
+    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+        LOG_INFO("\tVulkan: {0}", pCallbackData->pMessage);
+    }
+    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+        LOG_INFO("\tVulkan: {0}", pCallbackData->pMessage);
+    }
 
+    // Optionally handle the message types
+    if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
+        LOG_INFO("\tGeneral: {0}", pCallbackData->pMessageIdName);
+    }
+    if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
+        LOG_INFO("\tValidation: {0}", pCallbackData->pMessageIdName);
+    }
+    if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
+        LOG_INFO("\tPerformance: {0}", pCallbackData->pMessageIdName);
+    }
+
+    // Return VK_FALSE to indicate that the application should not be terminated
+    // If VK_TRUE is returned, the application will be terminated after the callback returns
+    return VK_FALSE;
+}
+
+static VulkanContext *s_Instance = nullptr;
 VulkanContext::VulkanContext(GLFWwindow* window)
     : m_Window(window)
 {
@@ -16,8 +52,9 @@ VulkanContext::VulkanContext(GLFWwindow* window)
 
     LOG_INFO("=== Initializing Vulkan ===");
     create_instance();
-    //create_debug_callback();
-
+#ifdef VK_DEBUG
+    create_debug_callback();
+#endif
     create_window_surface();
     m_PhysicalDevice = VulkanPhysicalDevice(m_Instance, m_Surface);
     m_QueueFamily = m_PhysicalDevice.select_device(VK_QUEUE_GRAPHICS_BIT, true);
@@ -63,13 +100,14 @@ VulkanContext::~VulkanContext()
     vkDestroySurfaceKHR(m_Instance, m_Surface, m_Allocator);
     LOG_INFO("[Vulkan] Window surface destroyed");
 
+#ifdef VK_DEBUG
     // destroy debug messenger
-    PFN_vkDestroyDebugUtilsMessengerEXT vk_destroy_debug_utils_messenger = VK_NULL_HANDLE;
-    vk_destroy_debug_utils_messenger = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(
+    const auto dbg_messenger_func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(
         m_Instance, "vkDestroyDebugUtilsMessengerEXT"));
-    ASSERT(vk_destroy_debug_utils_messenger, "[Vulkan] Cannot find address of vkDestroyDebugUtilsMessengerEXT");
-    vk_destroy_debug_utils_messenger(m_Instance, m_DebugMessenger, m_Allocator);
+    ASSERT(dbg_messenger_func, "[Vulkan] Cannot find address of vkDestroyDebugUtilsMessengerEXT");
+    dbg_messenger_func(m_Instance, m_DebugMessenger, m_Allocator);
     LOG_INFO("[Vulkan] Debug messenger destroyed");
+#endif
 
     // destroy device
     vkDestroyDevice(m_LogicalDevice, m_Allocator);
@@ -333,15 +371,13 @@ void VulkanContext::create_debug_callback()
     msg_create_info.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
                                     | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
                                     | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    msg_create_info.pfnUserCallback = VK_NULL_HANDLE;
+    msg_create_info.pfnUserCallback = vk_debug_messenger_callback;
     msg_create_info.pUserData       = VK_NULL_HANDLE;
 
-    PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessenger = VK_NULL_HANDLE;
-    vkCreateDebugUtilsMessenger = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
-        vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT"));
-    ASSERT(vkCreateDebugUtilsMessenger, "[Vulkan] Cannot find address of vkCreateDebugUtilsMessenger");
+    const auto dbg_messenger_func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT"));
+    ASSERT(dbg_messenger_func, "[Vulkan] Cannot find address of vkCreateDebugUtilsMessengerEXT");
 
-    const VkResult result = vkCreateDebugUtilsMessenger(m_Instance, &msg_create_info, m_Allocator, &m_DebugMessenger);
+    const VkResult result = dbg_messenger_func(m_Instance, &msg_create_info, m_Allocator, &m_DebugMessenger);
     VK_ERROR_CHECK(result, "[Vulkan] Failed to create debug messenger");
     LOG_INFO("[Vulkan] Debug utils messenger created");
 }
@@ -355,7 +391,7 @@ void VulkanContext::create_window_surface()
 
 void VulkanContext::create_device()
 {
-    float queue_priorities[] = { 1.0f };
+    const float queue_priorities[] = { 1.0f };
     VkDeviceQueueCreateInfo queue_create_info = {};
     queue_create_info.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_create_info.pQueuePriorities = queue_priorities;
