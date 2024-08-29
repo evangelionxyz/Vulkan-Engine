@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan_shader.h>
 
 #include "window.h"
 
@@ -27,6 +28,7 @@ private:
     VkRenderPass m_RenderPass = VK_NULL_HANDLE;
     Scope<Window> m_Window;
     Ref<VulkanContext> m_Vk;
+    Ref<VulkanShader> m_Shader;
 };
 
 #endif //APPLICATION_H

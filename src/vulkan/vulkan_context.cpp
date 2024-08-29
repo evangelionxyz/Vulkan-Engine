@@ -7,9 +7,13 @@
 #include "vulkan_wrapper.h"
 #include "core/assert.h"
 
+static VulkanContext *s_Instance = nullptr;
+
 VulkanContext::VulkanContext(GLFWwindow* window)
     : m_Window(window)
 {
+    s_Instance = this;
+
     LOG_INFO("=== Initializing Vulkan ===");
     create_instance();
     //create_debug_callback();
@@ -143,6 +147,8 @@ void VulkanContext::destroy_framebuffers(const std::vector<VkFramebuffer> &frame
 
 void VulkanContext::reset_command_pool() const
 {
+    m_Queue.wait_idle();
+
     VK_ERROR_CHECK(vkResetCommandPool(m_LogicalDevice, m_CommandPool, 0),
         "[Vulkan] Failed to reset command pool");
 }
@@ -214,6 +220,11 @@ VulkanSwapchain* VulkanContext::get_swapchain()
 bool VulkanContext::is_rebuild_swapchain() const
 {
     return m_RebuildSwapchain;
+}
+
+VulkanContext *VulkanContext::get_instance()
+{
+    return s_Instance;
 }
 
 void VulkanContext::create_command_buffers(u32 count, VkCommandBuffer* command_buffers) const

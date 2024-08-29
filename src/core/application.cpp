@@ -9,6 +9,8 @@ Application::Application(i32 argc, char **argv)
 {
     m_Window = CreateScope<Window>(600, 400, "Vulkan");
     m_Vk = CreateScope<VulkanContext>(m_Window->get_native_window());
+
+    m_Shader = CreateRef<VulkanShader>("res/shaders/default.vert", "res/shaders/default.frag");
 }
 
 Application::~Application()

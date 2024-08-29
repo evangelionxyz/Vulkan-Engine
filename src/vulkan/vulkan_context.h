@@ -39,6 +39,8 @@ public:
     VulkanSwapchain *get_swapchain();
     bool is_rebuild_swapchain() const;
 
+    static VulkanContext *get_instance();
+
 private:
     void create_instance();
     void create_debug_callback();

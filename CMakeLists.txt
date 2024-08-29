@@ -14,6 +14,8 @@ add_executable(Vulkan
     src/core/window.h
     src/vulkan/vulkan_context.cpp
     src/vulkan/vulkan_context.h
+    src/vulkan/vulkan_shader.cpp
+    src/vulkan/vulkan_shader.h
     src/core/assert.h
     src/vulkan/vulkan_physical_device.cpp
     src/vulkan/vulkan_physical_device.h
