@@ -2,25 +2,31 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
-#include "glfw/include/GLFW/glfw3.h"
 #include "types.h"
 
 struct WindowData
 {
-    i32 Width = 0;
-    i32 Height = 0;
+    i32 FbWidth = 0;
+    i32 FbHeight = 0;
+    i32 WindowWidth = 0;
+    i32 WindowHeight = 0;
     bool Fullscreen = false;
 };
 
+struct GLFWwindow;
 class Window {
 public:
     Window(i32 width, i32 height, const char *title);
     ~Window();
 
-    [[nodiscard]] bool is_looping() const { return glfwWindowShouldClose(m_Window) == false; }
+    [[nodiscard]] bool is_looping() const;
     void poll_events();
-    [[nodiscard]] i32 get_width() const { return m_Data.Width; }
-    [[nodiscard]] i32 get_height() const { return m_Data.Height; };
+
+    [[nodiscard]] u32 get_framebuffer_width() const { return static_cast<u32>(m_Data.FbWidth); }
+    [[nodiscard]] u32 get_framebuffer_height() const { return static_cast<u32>(m_Data.FbHeight); };
+    [[nodiscard]] u32 get_window_width() const { return static_cast<u32>(m_Data.WindowWidth); }
+    [[nodiscard]] u32 get_window_height() const { return static_cast<u32>(m_Data.WindowHeight); };
+
     [[nodiscard]] GLFWwindow *get_native_window() const { return m_Window;};
 
 private:

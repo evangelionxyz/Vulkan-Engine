@@ -6,7 +6,9 @@ add_library(IMGUI
     ${TP_DIR}/imgui/imgui_widgets.cpp
 
     ${TP_DIR}/imgui/backends/imgui_impl_vulkan.cpp
+    ${TP_DIR}/imgui/backends/imgui_impl_vulkan.h
     ${TP_DIR}/imgui/backends/imgui_impl_glfw.cpp
+    ${TP_DIR}/imgui/backends/imgui_impl_glfw.h
 )
 
 target_include_directories(IMGUI PRIVATE

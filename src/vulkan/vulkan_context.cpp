@@ -1,48 +1,10 @@
 // Copyright 2024, Evangelion Manuhutu
-
 #include "vulkan_context.h"
 
 #include <cstdio>
 #include <iterator>
 #include "vulkan_wrapper.h"
 #include "core/assert.h"
-
-static VkBool32 vk_debug_messenger_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
-    const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
-    void*                                            pUserData)
-{
-    LOG_INFO("[Vulkan Message]:");
-    // Determine the message severity level
-    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-        LOG_ERROR("\tVulkan: {0}", pCallbackData->pMessage);
-    }
-    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-        LOG_WARN("\tVulkan: {0}", pCallbackData->pMessage);
-    }
-    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-        LOG_INFO("\tVulkan: {0}", pCallbackData->pMessage);
-    }
-    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
-        LOG_INFO("\tVulkan: {0}", pCallbackData->pMessage);
-    }
-
-    // Optionally handle the message types
-    if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
-        LOG_INFO("\tGeneral: {0}", pCallbackData->pMessageIdName);
-    }
-    if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
-        LOG_INFO("\tValidation: {0}", pCallbackData->pMessageIdName);
-    }
-    if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
-        LOG_INFO("\tPerformance: {0}", pCallbackData->pMessageIdName);
-    }
-
-    // Return VK_FALSE to indicate that the application should not be terminated
-    // If VK_TRUE is returned, the application will be terminated after the callback returns
-    return VK_FALSE;
-}
 
 static VulkanContext *s_Instance = nullptr;
 VulkanContext::VulkanContext(GLFWwindow* window)
@@ -364,10 +326,8 @@ void VulkanContext::create_debug_callback()
     VkDebugUtilsMessengerCreateInfoEXT msg_create_info = {};
     msg_create_info.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     msg_create_info.pNext           = VK_NULL_HANDLE;
-    msg_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT
-                                    | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
-                                    | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT
-                                    | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+    msg_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+                                    | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     msg_create_info.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
                                     | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
                                     | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -573,7 +533,8 @@ void VulkanContext::create_graphics_pipeline()
     pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
     pipeline_create_info.basePipelineIndex = -1;
 
-    VK_ERROR_CHECK(vkCreateGraphicsPipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &m_GraphicsPipeline),
+    VK_ERROR_CHECK(vkCreateGraphicsPipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &pipeline_create_info,
+        m_Allocator, &m_GraphicsPipeline),
         "[Vulkan] Failed to create graphics pipeline");
 
 }

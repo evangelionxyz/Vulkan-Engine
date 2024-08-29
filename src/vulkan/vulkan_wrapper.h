@@ -16,6 +16,36 @@
     }\
 }
 
+static VkBool32 vk_debug_messenger_callback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
+    const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
+    void*                                            pUserData)
+{
+    LOG_INFO("[Vulkan Message]:");
+
+    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        LOG_ERROR("\tVulkan: {0}", pCallbackData->pMessage);
+    }
+    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+        LOG_WARN("\tVulkan: {0}", pCallbackData->pMessage);
+    }
+
+    if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
+        LOG_INFO("\tGeneral: {0}", pCallbackData->pMessageIdName);
+    }
+    if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
+        LOG_INFO("\tValidation: {0}", pCallbackData->pMessageIdName);
+    }
+    if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
+        LOG_INFO("\tPerformance: {0}", pCallbackData->pMessageIdName);
+    }
+
+    // Return VK_FALSE to indicate that the application should not be terminated
+    // If VK_TRUE is returned, the application will be terminated after the callback returns
+    return VK_FALSE;
+}
+
 static VkPresentModeKHR vk_choose_present_mode(const std::vector<VkPresentModeKHR> &present_modes)
 {
     for (const auto mode : present_modes)
@@ -40,8 +70,7 @@ static VkSurfaceFormatKHR vk_choose_surface_format(const std::vector<VkSurfaceFo
 {
     for (const auto format : formats)
     {
-        if (format.format == VK_FORMAT_B8G8R8A8_SRGB
-            && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
             return format;
     }
     return formats[0];
@@ -100,44 +129,6 @@ static VkImageView vk_create_image_view(const VkDevice device, const VkImage ima
     const VkResult result = vkCreateImageView(device, &view_info, allocator, &view);
     VK_ERROR_CHECK(result, "[Vulkan] Failed to create image view");
     return view;
-}
-
-static const char *vk_get_debug_severity_str(const VkDebugUtilsMessageSeverityFlagBitsEXT severity)
-{
-    switch (severity)
-    {
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: return "Verbose";
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: return "Info";
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: return "Warning";
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: return "Error";
-    default: return "Unknown";
-    }
-}
-
-static const char *vk_get_debug_type(const VkDebugUtilsMessageTypeFlagsEXT flags)
-{
-    switch (flags)
-    {
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT: return "General";
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT: return "Validation";
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT: return "Performance";
-    default: return "Unknown";
-    }
-}
-
-static VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-    VkDebugUtilsMessageTypeFlagsEXT type, const VkDebugUtilsMessengerCallbackDataEXT *p_callback_data, void *p_user_data)
-{
-    LOG_INFO("Debug callback: {}", p_callback_data->pMessage);
-    LOG_INFO("\tSeverity {}", vk_get_debug_severity_str(message_severity));
-    LOG_INFO("\tType {}", vk_get_debug_type(message_severity));
-    LOG_INFO("\tObjects ");
-    for (u32 i = 0; i < p_callback_data->objectCount; i++)
-    {
-        LOG_INFO("%lu ", p_callback_data->pObjects[i].objectHandle);
-    }
-
-    return VK_FALSE;
 }
 
 static void vk_print_image_usage_flags(const VkImageUsageFlags usage)
@@ -199,6 +190,5 @@ static void vk_print_memory_property(VkMemoryPropertyFlags properties)
         LOG_INFO("PROTECTED ");
     }
 }
-
 
 #endif //VULKAN_WRAPPER_H

@@ -6,12 +6,12 @@ VulkanSwapchain::VulkanSwapchain(VkDevice device, VkAllocationCallbacks *allocat
                                  VkPresentModeKHR present_mode, VkImageUsageFlags image_usage_flags, u32 queue_family_index)
     : m_Format(surface_format)
 {
-    const u32 image_count = vk_choose_images_count(capabilities);
+    m_MinImageCount = vk_choose_images_count(capabilities);
 
     VkSwapchainCreateInfoKHR swapchain_create_info = {};
     swapchain_create_info.sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_create_info.surface               = surface;
-    swapchain_create_info.minImageCount         = image_count;
+    swapchain_create_info.minImageCount         = m_MinImageCount;
     swapchain_create_info.imageFormat           = surface_format.format;
     swapchain_create_info.imageColorSpace       = surface_format.colorSpace;
     swapchain_create_info.imageExtent           = capabilities.currentExtent;
@@ -34,7 +34,7 @@ VulkanSwapchain::VulkanSwapchain(VkDevice device, VkAllocationCallbacks *allocat
     u32 swapchain_image_count = 0;
     result = vkGetSwapchainImagesKHR(device, m_Swapchain, &swapchain_image_count, nullptr);
     VK_ERROR_CHECK(result, "[Vulkan] Failed to get swapchain count");
-    ASSERT(image_count <= swapchain_image_count, "[Vulkan] Swapchain image count exceeds maximum number of images");
+    ASSERT(m_MinImageCount <= swapchain_image_count, "[Vulkan] Swapchain image count exceeds maximum number of images");
     LOG_INFO("[Vulkan] Requested {0} images, created {1} images", swapchain_image_count, swapchain_image_count);
 
     create_image_views(device, allocator, swapchain_image_count);
@@ -100,9 +100,14 @@ VkSurfaceFormatKHR VulkanSwapchain::get_vk_format() const
     return m_Format;
 }
 
-size_t VulkanSwapchain::get_vk_image_count() const
+u32 VulkanSwapchain::get_vk_image_count() const
 {
-    return m_Images.size();
+    return static_cast<u32>(m_Images.size());
+}
+
+u32 VulkanSwapchain::get_vk_min_image_count() const
+{
+    return m_MinImageCount;
 }
 
 

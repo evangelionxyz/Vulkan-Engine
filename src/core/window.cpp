@@ -2,6 +2,8 @@
 #include "window.h"
 #include "assert.h"
 
+#include <GLFW/glfw3.h>
+
 Window::Window(const i32 width, const i32 height, const char* title)
 {
     if (const i32 success = glfwInit(); !success)
@@ -15,8 +17,10 @@ Window::Window(const i32 width, const i32 height, const char* title)
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     m_Window = glfwCreateWindow(width, height, title, nullptr, nullptr);
-    m_Data.Width = width;
-    m_Data.Height = height;
+    m_Data.WindowWidth = width;
+    m_Data.WindowHeight = height;
+
+    glfwGetFramebufferSize(m_Window, &m_Data.FbWidth, &m_Data.FbHeight);
 
     glfwSetWindowUserPointer(m_Window, &m_Data);
     setup_callbacks();
@@ -31,6 +35,11 @@ Window::~Window()
     LOG_INFO("[Window] Window destroyed");
 }
 
+bool Window::is_looping() const
+{
+    return glfwWindowShouldClose(m_Window) == false;
+}
+
 void Window::poll_events()
 {
     glfwPollEvents();
@@ -43,10 +52,17 @@ void Window::setup_callbacks()
         ASSERT(false, "GLFW Error: '{0}' :{1}", description, error_code);
     });
 
+    glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, i32 width, i32 height)
+    {
+        WindowData& data = *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
+        data.WindowWidth = width;
+        data.WindowHeight = height;
+    });
+
     glfwSetFramebufferSizeCallback(m_Window, [](GLFWwindow* window, i32 width, i32 height)
     {
         WindowData& data = *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
-        data.Width = width;
-        data.Height = height;
+        data.FbWidth = width;
+        data.FbHeight = height;
     });
 }

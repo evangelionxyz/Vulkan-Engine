@@ -31,26 +31,28 @@ void VulkanQueue::submit_sync(VkCommandBuffer cmd) const
     submit_info.pCommandBuffers      = &cmd;
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores    = VK_NULL_HANDLE;
+
     VK_ERROR_CHECK(vkQueueSubmit(m_Queue, 1, &submit_info, m_InFlightFence),
         "[Vulkan] Failed to submit");
 }
 
-void VulkanQueue::submit_async(VkCommandBuffer cmd) const
+void VulkanQueue::submit_async(const VkCommandBuffer cmd) const
 {
     // submit command buffer
-    VkSemaphore wait_semaphores[] = {m_ImageAvailableSemaphore};
-    VkSemaphore signaled_semaphores[] = {m_RenderFinishedSemaphore};
+    VkSemaphore wait_semaphores[]      = {m_ImageAvailableSemaphore};
+    VkSemaphore signaled_semaphores[]  = {m_RenderFinishedSemaphore};
     VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
     VkSubmitInfo submit_info = {};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pWaitDstStageMask = wait_stages;
-    submit_info.commandBufferCount = 1u;
-    submit_info.pCommandBuffers = &cmd;
+    submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pWaitDstStageMask    = wait_stages;
+    submit_info.commandBufferCount   = 1u;
+    submit_info.pCommandBuffers      = &cmd;
     submit_info.signalSemaphoreCount = 1u;
-    submit_info.pSignalSemaphores = signaled_semaphores;
-    submit_info.waitSemaphoreCount = 1u;
-    submit_info.pWaitSemaphores = wait_semaphores;
+    submit_info.pSignalSemaphores    = signaled_semaphores;
+    submit_info.waitSemaphoreCount   = 1u;
+    submit_info.pWaitSemaphores      = wait_semaphores;
+
     vkQueueSubmit(m_Queue, 1u, &submit_info, m_InFlightFence);
 }
 
@@ -58,13 +60,13 @@ void VulkanQueue::present(const u32 image_index) const
 {
     VkSemaphore signaled_semaphores[] = {m_RenderFinishedSemaphore};
     VkPresentInfoKHR present_info = {};
-    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.waitSemaphoreCount = 1u;
-    present_info.pWaitSemaphores = signaled_semaphores;
-    present_info.swapchainCount = 1u;
-    present_info.pSwapchains = &m_Swapchain;
-    present_info.pImageIndices = &image_index;
-    present_info.pResults = VK_NULL_HANDLE;
+    present_info.pWaitSemaphores    = signaled_semaphores;
+    present_info.swapchainCount     = 1u;
+    present_info.pSwapchains        = &m_Swapchain;
+    present_info.pImageIndices      = &image_index;
+    present_info.pResults           = VK_NULL_HANDLE;
 
     vkQueuePresentKHR(m_Queue, &present_info);
 }

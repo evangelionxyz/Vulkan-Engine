@@ -1,10 +1,10 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-
 #include "vulkan_physical_device.h"
-#include <cstdio>
 #include "vulkan_wrapper.h"
-#include <vulkan/vulkan.h>
 #include "core/assert.h"
+
+#include <cstdio>
+#include <vulkan/vulkan.h>
 
 VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, const VkSurfaceKHR& surface)
 {

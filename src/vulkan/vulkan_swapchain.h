@@ -23,7 +23,8 @@ public:
     VkImageViews get_vk_image_views() const;
     const VkImageView &get_vk_image_view(u32 index) const;
     VkSurfaceFormatKHR get_vk_format() const;
-    size_t get_vk_image_count() const;
+    u32 get_vk_image_count() const;
+    u32 get_vk_min_image_count() const;
 
 private:
     void create_image_views(VkDevice device, VkAllocationCallbacks *allocator, u32 image_count);
@@ -32,6 +33,7 @@ private:
     VkSurfaceFormatKHR m_Format;
     VkImages m_Images;
     VkImageViews m_ImageViews;
+    u32 m_MinImageCount = 0;
 };
 
 #endif //VULKAN_SWAPCHAIN_H

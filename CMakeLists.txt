@@ -37,6 +37,8 @@ target_link_libraries(Vulkan PRIVATE GLFW IMGUI)
 target_include_directories(Vulkan PRIVATE
     src
     ${TP_DIR}
+    ${TP_DIR}/glm
+    ${TP_DIR}/imgui
     ${TP_DIR}/glfw/include
 )
 
