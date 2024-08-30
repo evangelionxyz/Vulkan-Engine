@@ -26,12 +26,13 @@ target_include_directories(Vulkan PRIVATE
 
     ${TP_DIR}
     ${TP_DIR}/glm
+    ${TP_DIR}/fmt/include
     ${TP_DIR}/imgui
     ${TP_DIR}/glfw/include
 )
 
 add_dependencies(Vulkan GLFW IMGUI)
-target_link_libraries(Vulkan PRIVATE GLFW IMGUI)
+target_link_libraries(Vulkan PRIVATE GLFW IMGUI fmt)
 
 target_compile_definitions(Vulkan PRIVATE GLFW_INCLUDE_NONE)
 
@@ -68,12 +69,16 @@ if (WIN32)
     endif()
 elseif (UNIX AND NOT APPLE)
     target_compile_definitions(Vulkan PRIVATE PLATFORM_LINUX)
+
     target_include_directories(Vulkan PRIVATE /usr/include)
     target_link_directories(Vulkan PRIVATE /usr/lib)
 
     target_link_libraries(Vulkan PRIVATE
-        vulkan shaderc_shared spirv-cross-core spirv-cross-glsl
-        pthread dl m rt fmt
+        vulkan
+        shaderc_shared
+        spirv-cross-core
+        spirv-cross-glsl
+        pthread dl m rt
     )
 endif()
 

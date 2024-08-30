@@ -2,12 +2,16 @@
 
 #ifndef VULKAN_CONTEXT_H
 #define VULKAN_CONTEXT_H
+
 #include <unordered_map>
-#include <vulkan/vulkan.h>
+
 #include "vulkan_physical_device.h"
 #include "vulkan_queue.h"
 #include "vulkan_swapchain.h"
-#include "GLFW/glfw3.h"
+
+#include <vulkan/vulkan.h>
+
+struct GLFWwindow;
 
 class VulkanContext {
 public:

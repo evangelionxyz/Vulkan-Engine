@@ -66,6 +66,11 @@ static std::string vulkan_shader_stage_extension(const VkShaderStageFlagBits sta
 VulkanShader::VulkanShader(const std::filesystem::path& vertex_shader_path,
                            const std::filesystem::path& fragment_shader_path)
 {
+    if (!std::filesystem::exists(vertex_shader_path) || !std::filesystem::exists(vertex_shader_path))
+    {
+        ASSERT(false, "[Vulkan Shader] Shader is not exists");
+    }
+
     create_cached_directory_if_needed();
     const std::string vertex_shader_source = read_file(vertex_shader_path);
     const std::string fragment_shader_source = read_file(fragment_shader_path);

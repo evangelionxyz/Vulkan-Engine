@@ -7,11 +7,7 @@
 #include <iomanip>
 #include <sstream>
 
-#ifdef _WIN32
-#   include <format>
-#elif PLATFORM_LINUX
-#   include <fmt/format.h>
-#endif
+#include <fmt/format.h>
 
 enum LoggingLevel
 {

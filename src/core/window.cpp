@@ -6,17 +6,21 @@
 
 Window::Window(const i32 width, const i32 height, const char* title)
 {
-    if (const i32 success = glfwInit(); !success)
+    i32 success = glfwInit(); 
+    if (!success)
     {
-        LOG_ERROR("[Window] Could not initialize GLFW");
+        ASSERT(false, "[Window] Could not initialize GLFW");
         exit(EXIT_FAILURE);
     }
+
+
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     m_Window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+
     m_Data.WindowWidth = width;
     m_Data.WindowHeight = height;
 

@@ -7,6 +7,8 @@
 #include "vulkan_wrapper.h"
 #include "core/assert.h"
 
+#include <GLFW/glfw3.h>
+
 static VulkanContext *s_Instance = nullptr;
 VulkanContext::VulkanContext(GLFWwindow* window)
     : m_Window(window)
