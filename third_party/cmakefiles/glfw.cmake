@@ -29,10 +29,12 @@ if (WIN32)
         ${TP_DIR}/glfw/src/win32_thread.c
         ${TP_DIR}/glfw/src/win32_window.c
     )
-elseif(LINUX)
-    target_compile_definitions(GLFW PRIVATE
-        _GLFW_X11
-    )
+
+elseif (UNIX AND NOT APPLE)
+    
+    target_compile_definitions(GLFW PRIVATE _GLFW_X11)
+    message(">> GLFW: X11")
+
     target_sources(GLFW PRIVATE
         ${TP_DIR}/glfw/src/posix_time.c
         ${TP_DIR}/glfw/src/posix_thread.c

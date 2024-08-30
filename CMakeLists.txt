@@ -1,63 +1,43 @@
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 3.20)
 project(Vulkan)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(TP_DIR ${ROOT_DIR}/third_party)
+
+if (WIN32)
+    if(NOT DEFINED ENV{VULKAN_SDK})
+        message(FATAL_ERROR
+            ">> VULKAN_SDK environment variable not defined. Please install the Vulkan SDK and set the environment variable.")
+    endif()
+    
+    set(VULKAN_INCLUDE_DIR $ENV{VULKAN_SDK}/Include)
+    set(VULKAN_LIBRARY_DIR $ENV{VULKAN_SDK}/Lib)
+
+    message(">> Platform: Win32")
+    message(">> Vulkan include dir: ${VULKAN_INCLUDE_DIR}")
+    message(">> Vulkan lib dir: ${VULKAN_LIBRARY_DIR}")
+
+    # Enable Hot Reload for MSVC compilers if supported.
+    if (POLICY CMP0141)
+    cmake_policy(SET CMP0141 NEW)
+    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT 
+        $<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>
+    )
+    endif()
+elseif (UNIX AND NOT APPLE)
+    # Check if we're running in WSL
+    execute_process(COMMAND uname -r OUTPUT_VARIABLE WSL_KERNEL_NAME)
+    string(FIND "${WSL_KERNEL_NAME}" "Microsoft" WSL_FOUND)
+    
+    if (WSL_FOUND EQUAL -1)
+        message(">> Platform: WSL")
+    else()
+        message(">> Platform: LINUX")
+    endif()
+endif()
 
 include(third_party/cmakefiles/glfw.cmake)
 include(third_party/cmakefiles/imgui.cmake)
 
-add_executable(Vulkan
-    src/vulkan_engine.cpp
-    src/core/window.cpp
-    src/core/window.h
-    src/vulkan/vulkan_context.cpp
-    src/vulkan/vulkan_context.h
-    src/vulkan/vulkan_shader.cpp
-    src/vulkan/vulkan_shader.h
-    src/core/assert.h
-    src/vulkan/vulkan_physical_device.cpp
-    src/vulkan/vulkan_physical_device.h
-    src/vulkan/vulkan_wrapper.h
-    src/core/types.h
-    src/vulkan/vulkan_queue.cpp
-    src/vulkan/vulkan_queue.h
-    src/core/logger.h
-    src/core/logger.cpp
-    src/core/application.cpp
-    src/core/application.h
-    src/vulkan/vulkan_swapchain.cpp
-    src/vulkan/vulkan_swapchain.h
-)
-
-add_dependencies(Vulkan GLFW IMGUI)
-target_link_libraries(Vulkan PRIVATE GLFW IMGUI)
-
-target_include_directories(Vulkan PRIVATE
-    src
-    ${TP_DIR}
-    ${TP_DIR}/glm
-    ${TP_DIR}/imgui
-    ${TP_DIR}/glfw/include
-)
-
-target_compile_definitions(Vulkan PRIVATE GLFW_INCLUDE_NONE)
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(Vulkan PRIVATE VK_DEBUG)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_definitions(Vulkan PRIVATE VK_RELEASE)
-endif()
-
-if (WIN32)
-    target_compile_definitions(Vulkan PRIVATE PLATFORM_WINDOWS)
-elseif (LINUX)
-    target_compile_definitions(Vulkan PRIVATE PLATFORM_LINUX)
-    target_include_directories(Vulkan PRIVATE /usr/include)
-    target_link_directories(Vulkan PRIVATE /usr/lib)
-    target_link_libraries(Vulkan PRIVATE
-        vulkan shaderc_shared spirv-cross-core spirv-cross-glsl
-        pthread dl m rt fmt
-    )
-endif()
-
+add_subdirectory(src/)

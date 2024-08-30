@@ -14,4 +14,5 @@ add_library(IMGUI
 target_include_directories(IMGUI PRIVATE
     ${TP_DIR}/imgui
     ${TP_DIR}/glfw/include
+    ${VULKAN_INCLUDE_DIR}
 )

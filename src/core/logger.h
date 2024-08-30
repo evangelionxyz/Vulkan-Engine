@@ -6,9 +6,10 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+
 #ifdef _WIN32
 #   include <format>
-#elif __linux__
+#elif PLATFORM_LINUX
 #   include <fmt/format.h>
 #endif
 

@@ -34,7 +34,6 @@ void Application::run()
     while (m_Window->is_looping())
     {
         m_Window->poll_events();
-
         {
             imgui_begin();
             ImGui::ShowDemoWindow();

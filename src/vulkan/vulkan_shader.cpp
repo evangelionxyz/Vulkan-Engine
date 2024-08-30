@@ -71,8 +71,8 @@ VulkanShader::VulkanShader(const std::filesystem::path& vertex_shader_path,
     const std::string fragment_shader_source = read_file(fragment_shader_path);
 
     std::unordered_map<VkShaderStageFlagBits, std::vector<u32>> vulkan_shader;
-    vulkan_shader[VK_SHADER_STAGE_VERTEX_BIT] = compile_or_get_vulkan_binaries(vertex_shader_source, vertex_shader_path, VK_SHADER_STAGE_VERTEX_BIT);
-    vulkan_shader[VK_SHADER_STAGE_FRAGMENT_BIT] = compile_or_get_vulkan_binaries(fragment_shader_source, fragment_shader_path, VK_SHADER_STAGE_FRAGMENT_BIT);
+    vulkan_shader[VK_SHADER_STAGE_VERTEX_BIT] = compile_or_get_vulkan_binaries(vertex_shader_source, vertex_shader_path.string().c_str(), VK_SHADER_STAGE_VERTEX_BIT);
+    vulkan_shader[VK_SHADER_STAGE_FRAGMENT_BIT] = compile_or_get_vulkan_binaries(fragment_shader_source, fragment_shader_path.string().c_str(), VK_SHADER_STAGE_FRAGMENT_BIT);
 
     VulkanContext *vk_context = VulkanContext::get_instance();
     for (auto &[stage, code] : vulkan_shader)

@@ -2,3 +2,5 @@
 /cmake-build-release/
 /build/
 /res/cache/
+/out/
+/.vs/

@@ -1,6 +1,7 @@
 // Copyright 2024, Evangelion Manuhutu
 #include "vulkan_context.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <iterator>
 #include "vulkan_wrapper.h"
