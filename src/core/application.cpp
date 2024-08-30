@@ -21,6 +21,7 @@ Application::Application(i32 argc, char **argv)
 Application::~Application()
 {
     m_Vk->get_queue()->wait_idle();
+    imgui_shutdown();
     m_Vk->free_command_buffers(m_CommandBuffers);
     m_Vk->destroy_framebuffers(m_Framebuffers);
 }
@@ -34,6 +35,7 @@ void Application::run()
     while (m_Window->is_looping())
     {
         m_Window->poll_events();
+
         {
             imgui_begin();
             ImGui::ShowDemoWindow();
@@ -44,8 +46,6 @@ void Application::run()
         }
         present();
     }
-
-    imgui_shutdown();
 }
 
 void Application::record_command_buffer(VkCommandBuffer command_buffer, u32 image_index) const
@@ -115,6 +115,12 @@ void Application::imgui_init()
 
     ImGui::StyleColorsDark();
 
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    io.ConfigViewportsNoDecoration = false;
+
     // setup renderer backends
     constexpr bool install_callbacks = true;
     ImGui_ImplGlfw_InitForVulkan(m_Window->get_native_window(), install_callbacks);
@@ -142,22 +148,63 @@ void Application::imgui_begin()
     // i32 width = m_Window->get_framebuffer_width();
     // i32 height = m_Window->get_framebuffer_height();
     // TODO: Recreate swapchain
-    // TODO: Dock space
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+
+    static ImGuiDockNodeFlags doc_space_flags = ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_PassthruCentralNode;
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking
+        | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+        | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+    ImGui::SetNextWindowViewport(viewport->ID);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PopStyleVar(2);
+
+    if (doc_space_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+    {
+        window_flags |= ImGuiWindowFlags_NoBackground;
+    }
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(1, 2));
+    ImGui::Begin("ORigin", nullptr, window_flags);
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    const float min_window_size_x = style.WindowMinSize.x;
+    const float min_window_size_y = style.WindowMinSize.y;
+    style.WindowMinSize.x = 220.0f;
+    style.WindowMinSize.y = 38.0f;
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DockingEnable)
+    {
+        const ImGuiID dock_space_id = ImGui::GetID("MyDockSpace");
+        ImGui::DockSpace(dock_space_id, ImVec2(0.0f, 0.0f), doc_space_flags);
+    }
+    style.WindowMinSize.x = min_window_size_x;
+    style.WindowMinSize.y = min_window_size_y;
 }
 
 void Application::imgui_end()
 {
+    // docking window
+    ImGui::End();
+    ImGui::PopStyleVar();
+
     ImGui::Render();
+
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
 }
 
 void Application::imgui_shutdown() const
 {
-    m_Vk->get_queue()->wait_idle();
-
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
