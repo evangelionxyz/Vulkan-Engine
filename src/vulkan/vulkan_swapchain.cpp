@@ -28,14 +28,14 @@ VulkanSwapchain::VulkanSwapchain(VkDevice device, VkAllocationCallbacks *allocat
 
     VkResult result = vkCreateSwapchainKHR(device, &swapchain_create_info, allocator, &m_Swapchain);
     VK_ERROR_CHECK(result, "[Vulkan] Failed to create swapchain");
-    LOG_INFO("[Vulkan] Swapchain created");
+    Logger::get_instance().push_message("[Vulkan] Swapchain created");
 
     // create swapchain images
     u32 swapchain_image_count = 0;
     result = vkGetSwapchainImagesKHR(device, m_Swapchain, &swapchain_image_count, nullptr);
     VK_ERROR_CHECK(result, "[Vulkan] Failed to get swapchain count");
     ASSERT(m_MinImageCount <= swapchain_image_count, "[Vulkan] Swapchain image count exceeds maximum number of images");
-    LOG_INFO("[Vulkan] Requested {0} images, created {1} images", swapchain_image_count, swapchain_image_count);
+    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Requested {0} images, created {1} images", swapchain_image_count, swapchain_image_count);
 
     create_image_views(device, allocator, swapchain_image_count);
 }
@@ -63,11 +63,11 @@ void VulkanSwapchain::destroy(VkDevice device, const VkAllocationCallbacks* allo
     // destroy image view
     for (const auto image_view : m_ImageViews)
         vkDestroyImageView(device, image_view, allocator);
-    LOG_INFO("[Vulkan] Image views destroyed");
+    Logger::get_instance().push_message("[Vulkan] Image views destroyed");
 
     // destroy swapchain
     vkDestroySwapchainKHR(device, m_Swapchain, allocator);
-    LOG_INFO("[Vulkan] Swapchain destroyed");
+    Logger::get_instance().push_message("[Vulkan] Swapchain destroyed");
 }
 
 const VkSwapchainKHR* VulkanSwapchain::get_vk_swapchain()

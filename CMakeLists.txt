@@ -40,5 +40,4 @@ endif()
 include(third_party/cmakefiles/glfw.cmake)
 include(third_party/cmakefiles/imgui.cmake)
 
-add_subdirectory(${TP_DIR}/fmt)
 add_subdirectory(src/)

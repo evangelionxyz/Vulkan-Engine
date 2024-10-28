@@ -129,14 +129,14 @@ std::string VulkanShader::read_file(const std::filesystem::path& file_path)
         }
         else
         {
-            LOG_ERROR("[Vulkan Shader] Could not read from file. {0}", file_path.string());
+            Logger::get_instance().push_message(LoggingLevel::Error, "[Vulkan Shader] Could not read from file. {0}", file_path.string());
         }
 
         shader_in.close();
     }
     else
     {
-        LOG_ERROR("[Vulkan Shader] Could not open file. {0}", file_path.string());
+        Logger::get_instance().push_message(LoggingLevel::Error, "[Vulkan Shader] Could not open file. {0}", file_path.string());
     }
     return result;
 }
@@ -193,13 +193,13 @@ void VulkanShader::reflect(const VkShaderStageFlagBits shader_stage, const std::
     spirv_cross::Compiler compiler(code);
     spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
-    LOG_INFO("[Vulkan Shader] Shader reflect - {0}", vulkan_shader_stage_str(shader_stage));
-    LOG_INFO("[Vulkan Shader]    {0} Uniform buffers", resources.uniform_buffers.size());
-    LOG_INFO("[Vulkan Shader]    {0} Resources", resources.sampled_images.size());
+    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader] Shader reflect - {0}", vulkan_shader_stage_str(shader_stage));
+    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    {0} Uniform buffers", resources.uniform_buffers.size());
+    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    {0} Resources", resources.sampled_images.size());
 
     if (!resources.uniform_buffers.empty())
     {
-        LOG_INFO("[Vulkan Shader] Uniform buffers: ");
+        Logger::get_instance().push_message("[Vulkan Shader] Uniform buffers: ");
         for (const auto& uniform_buffer : resources.uniform_buffers)
         {
             const auto &buffer_type = compiler.get_type(uniform_buffer.base_type_id);
@@ -207,10 +207,10 @@ void VulkanShader::reflect(const VkShaderStageFlagBits shader_stage, const std::
             u32 binding = compiler.get_decoration(uniform_buffer.id, spv::DecorationBinding);
             size_t member_count = buffer_type.member_types.size();
 
-            LOG_INFO("[Vulkan Shader]    Name = {0}", uniform_buffer.name);
-            LOG_INFO("[Vulkan Shader]    Size = {0}", buffer_size);
-            LOG_INFO("[Vulkan Shader] Binding = {0}", binding);
-            LOG_INFO("[Vulkan Shader] Members = {0}", member_count);
+            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    Name = {0}", uniform_buffer.name);
+            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    Size = {0}", buffer_size);
+            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader] Binding = {0}", binding);
+            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader] Members = {0}", member_count);
         }
     }
 }

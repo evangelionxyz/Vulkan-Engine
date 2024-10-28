@@ -14,25 +14,23 @@ add_executable(Vulkan
     ${ROOT_DIR}/src/vulkan/vulkan_queue.cpp
     ${ROOT_DIR}/src/vulkan/vulkan_queue.h
     ${ROOT_DIR}/src/core/logger.h
-    ${ROOT_DIR}/src/core/logger.cpp
     ${ROOT_DIR}/src/core/application.cpp
     ${ROOT_DIR}/src/core/application.h
     ${ROOT_DIR}/src/vulkan/vulkan_swapchain.cpp
     ${ROOT_DIR}/src/vulkan/vulkan_swapchain.h
-)
+ "vulkan/vulkan_image.cpp")
 
 target_include_directories(Vulkan PRIVATE
     ${ROOT_DIR}/src
 
     ${TP_DIR}
     ${TP_DIR}/glm
-    ${TP_DIR}/fmt/include
     ${TP_DIR}/imgui
     ${TP_DIR}/glfw/include
 )
 
 add_dependencies(Vulkan GLFW IMGUI)
-target_link_libraries(Vulkan PRIVATE GLFW IMGUI fmt)
+target_link_libraries(Vulkan PRIVATE GLFW IMGUI)
 
 target_compile_definitions(Vulkan PRIVATE GLFW_INCLUDE_NONE)
 

@@ -20,8 +20,7 @@
 #   define ASSERT(condition, ...)\
     do {\
         if (!(condition)) {\
-            LOG_ERROR("Assertion failed at '{0}' at line {1}\n", __FILE__, __LINE__);\
-            LOG_ERROR(__VA_ARGS__);\
+            Logger::get_instance().push_message(LoggingLevel::Error, "Assertion failed at '{}' at line {}\n", __FILE__, __LINE__);\
             DEBUG_BREAK();\
         }\
     } while(0)

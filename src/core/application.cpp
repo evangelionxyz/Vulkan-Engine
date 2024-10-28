@@ -56,8 +56,6 @@ void Application::record_command_buffer(VkCommandBuffer command_buffer, u32 imag
     begin_info.pNext = VK_NULL_HANDLE;
     begin_info.pInheritanceInfo = VK_NULL_HANDLE;
 
-    vkBeginCommandBuffer(command_buffer, &begin_info); // command buffer
-
     const u32 width = m_Window->get_framebuffer_width();
     const u32 height = m_Window->get_framebuffer_height();
 
@@ -71,6 +69,8 @@ void Application::record_command_buffer(VkCommandBuffer command_buffer, u32 imag
     render_pass_begin_info.framebuffer     = m_Framebuffers[image_index];
     render_pass_begin_info.clearValueCount = 1;
     render_pass_begin_info.pClearValues    = &clear_color;
+
+    vkBeginCommandBuffer(command_buffer, &begin_info); // command buffer
 
     vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE); // render pass
 

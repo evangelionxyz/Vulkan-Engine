@@ -7,13 +7,20 @@
 #include "core/assert.h"
 #include "core/logger.h"
 
+template<typename... Args>
+void vk_error_check(VkResult result, Args&&... args)
+{
+    if (result != VK_SUCCESS)
+    {
+        Logger::get_instance().push_message(LoggingLevel::Error, "[Vulkan] Assertion failed at {}: line {}", __FILE__, __LINE__);
+        Logger::get_instance().push_message(LoggingLevel::Error, std::forward<Args>(args)...);
+        DEBUG_BREAK();
+    }
+}
+
 #define VK_ERROR_CHECK(result, ...)\
 {\
-    if (result != VK_SUCCESS){\
-        LOG_ERROR("[Vulkan] Assertion failed at {0}: line {1}", __FILE__, __LINE__);\
-        LOG_ERROR(__VA_ARGS__);\
-        DEBUG_BREAK();\
-    }\
+    vk_error_check(result, __VA_ARGS__);\
 }
 
 static VkBool32 vk_debug_messenger_callback(
@@ -22,23 +29,24 @@ static VkBool32 vk_debug_messenger_callback(
     const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
     void*                                            pUserData)
 {
-    LOG_INFO("[Vulkan Message]:");
+
+    Logger::get_instance().push_message("[Vulkan Message]:");
 
     if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-        LOG_ERROR("\tVulkan: {0}", pCallbackData->pMessage);
+        Logger::get_instance().push_message(LoggingLevel::Error, "Vulkan {}", pCallbackData->pMessage);
     }
     else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-        LOG_WARN("\tVulkan: {0}", pCallbackData->pMessage);
+        Logger::get_instance().push_message(LoggingLevel::Warning, "Vulkan {}", pCallbackData->pMessage);
     }
 
     if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
-        LOG_INFO("\tGeneral: {0}", pCallbackData->pMessageIdName);
+        Logger::get_instance().push_message(LoggingLevel::Info, "\tGeneral: {}", pCallbackData->pMessageIdName);
     }
     if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
-        LOG_INFO("\tValidation: {0}", pCallbackData->pMessageIdName);
+        Logger::get_instance().push_message(LoggingLevel::Info, "\tValidation: {}", pCallbackData->pMessageIdName);
     }
     if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
-        LOG_INFO("\tPerformance: {0}", pCallbackData->pMessageIdName);
+        Logger::get_instance().push_message(LoggingLevel::Info, "\tPerformance: {}", pCallbackData->pMessageIdName);
     }
 
     // Return VK_FALSE to indicate that the application should not be terminated
@@ -135,31 +143,31 @@ static void vk_print_image_usage_flags(const VkImageUsageFlags usage)
 {
     if (usage & VK_IMAGE_USAGE_SAMPLED_BIT)
     {
-        LOG_INFO("\t[Vulkan] Sampled is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Sampled is supported");
     }
     else if (usage & VK_IMAGE_USAGE_STORAGE_BIT)
     {
-        LOG_INFO("\t[Vulkan] Storage is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Storage is supported");
     }
     else if (usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
     {
-        LOG_INFO("\t[Vulkan] Input attachment is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Input attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
     {
-        LOG_INFO("\t[Vulkan] Depth stencil attachment is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Depth stencil attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
     {
-        LOG_INFO("\t[Vulkan] Color attachment is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Color attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
     {
-        LOG_INFO("\t[Vulkan] Transfer dst is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Transfer dst is supported");
     }
     else if (usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
     {
-        LOG_INFO("\t[Vulkan] Transfer src is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Transfer src is supported");
     }
 }
 
@@ -167,27 +175,27 @@ static void vk_print_memory_property(VkMemoryPropertyFlags properties)
 {
     if (properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     {
-        LOG_INFO("DEVICE LOCAL ");
+        Logger::get_instance().push_message(LoggingLevel::Info, "DEVICE LOCAL ");
     }
     else if (properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     {
-        LOG_INFO("HOST VISIBLE ");
+        Logger::get_instance().push_message(LoggingLevel::Info, "HOST VISIBLE ");
     }
     else if (properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     {
-        LOG_INFO("HOST COHERENT ");
+        Logger::get_instance().push_message(LoggingLevel::Info, "HOST COHERENT ");
     }
     else if (properties & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
     {
-        LOG_INFO("HOST CACHED ");
+        Logger::get_instance().push_message(LoggingLevel::Info, "HOST CACHED ");
     }
     else if (properties & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
     {
-        LOG_INFO("LAZILY ALLOCATED ");
+        Logger::get_instance().push_message(LoggingLevel::Info, "LAZILY ALLOCATED ");
     }
     else if (properties & VK_MEMORY_PROPERTY_PROTECTED_BIT)
     {
-        LOG_INFO("PROTECTED ");
+        Logger::get_instance().push_message(LoggingLevel::Info, "PROTECTED ");
     }
 }
 

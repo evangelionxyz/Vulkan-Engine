@@ -7,7 +7,7 @@ VulkanQueue::VulkanQueue(VkDevice device, VkSwapchainKHR swapchain, VkAllocation
 {
     // create queue
     vkGetDeviceQueue(m_Device, queue_family_index, queue_index, &m_Queue);
-    LOG_INFO("[Vulkan] Queue Acquired");
+    Logger::get_instance().push_message("[Vulkan] Queue Acquired");
     create_semaphores();
 }
 
