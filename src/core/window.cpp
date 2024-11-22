@@ -4,6 +4,14 @@
 
 #include <GLFW/glfw3.h>
 
+#ifdef _WIN32
+    #define GLFW_EXPOSE_NATIVE_WIN32
+    #include <GLFW/glfw3native.h>
+    #include <Windows.h>
+    #include <dwmapi.h>
+    #pragma comment(lib, "Dwmapi.lib")
+#endif
+
 Window::Window(const i32 width, const i32 height, const char* title)
 {
     i32 success = glfwInit(); 
@@ -15,9 +23,19 @@ Window::Window(const i32 width, const i32 height, const char* title)
     
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     m_Window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+
+#ifdef _WIN32
+    HWND hwnd = glfwGetWin32Window(m_Window);
+    BOOL useDarkMode = TRUE;
+    DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDarkMode, sizeof(useDarkMode));
+
+    // 7160E8 visual studio purple
+    COLORREF rgbRed = 0x00E86071;
+    DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, &rgbRed, sizeof(rgbRed));
+#endif
 
     m_Data.WindowWidth = width;
     m_Data.WindowHeight = height;

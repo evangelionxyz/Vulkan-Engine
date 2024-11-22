@@ -25,14 +25,16 @@ using VkPresentModes = std::vector<VkPresentModeKHR>;
 class VulkanPhysicalDevice {
 public:
     VulkanPhysicalDevice() = default;
-    VulkanPhysicalDevice(VkInstance instance, const VkSurfaceKHR &surface);
+    VulkanPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
     u32 select_device(VkQueueFlags required_queue_flags, bool support_present);
-    const PhysicalDevice& get_selected_device() const;
+    PhysicalDevice get_selected_device() const;
 
-private:
+    static VkSurfaceCapabilitiesKHR get_surface_capabilities(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
     static VkSurfaceFormats get_surface_format(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
     static VkPresentModes get_surface_present_modes(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
 
+private:
+    VkSurfaceKHR m_Surface;
     std::vector<PhysicalDevice> m_Devices;
     i32 m_DeviceIndex = -1;
 };

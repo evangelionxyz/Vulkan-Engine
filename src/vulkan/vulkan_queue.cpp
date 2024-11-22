@@ -3,20 +3,12 @@
 #include "vulkan_wrapper.h"
 
 VulkanQueue::VulkanQueue(VkDevice device, VkSwapchainKHR swapchain, VkAllocationCallbacks *allocator,  u32 queue_family_index, u32 queue_index)
-    : m_Device(device), m_Swapchain(swapchain), m_Allocator(allocator)
+    : m_Device(device), m_Allocator(allocator)
 {
     // create queue
     vkGetDeviceQueue(m_Device, queue_family_index, queue_index, &m_Queue);
     Logger::get_instance().push_message("[Vulkan] Queue Acquired");
     create_semaphores();
-}
-
-u32 VulkanQueue::acquired_next_image() const
-{
-    u32 image_index = 0;
-    VK_ERROR_CHECK(vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore, VK_NULL_HANDLE, &image_index),
-        "[Vulkan] Failed to acquired image at index {0}", image_index);
-    return image_index;
 }
 
 void VulkanQueue::submit_sync(VkCommandBuffer cmd) const
@@ -56,7 +48,7 @@ void VulkanQueue::submit_async(const VkCommandBuffer cmd) const
     vkQueueSubmit(m_Queue, 1u, &submit_info, m_InFlightFence);
 }
 
-void VulkanQueue::present(const u32 image_index) const
+VkResult VulkanQueue::present(const u32 image_index, VkSwapchainKHR swapchain) const
 {
     VkSemaphore signaled_semaphores[] = {m_RenderFinishedSemaphore};
     VkPresentInfoKHR present_info = {};
@@ -64,11 +56,11 @@ void VulkanQueue::present(const u32 image_index) const
     present_info.waitSemaphoreCount = 1u;
     present_info.pWaitSemaphores    = signaled_semaphores;
     present_info.swapchainCount     = 1u;
-    present_info.pSwapchains        = &m_Swapchain;
+    present_info.pSwapchains        = &swapchain;
     present_info.pImageIndices      = &image_index;
     present_info.pResults           = VK_NULL_HANDLE;
 
-    vkQueuePresentKHR(m_Queue, &present_info);
+    return vkQueuePresentKHR(m_Queue, &present_info);
 }
 
 void VulkanQueue::wait_idle() const

@@ -6,6 +6,7 @@
 
 #include "core/assert.h"
 #include "core/logger.h"
+#include "core/types.h"
 
 template<typename... Args>
 void vk_error_check(VkResult result, Args&&... args)
@@ -78,7 +79,7 @@ static VkSurfaceFormatKHR vk_choose_surface_format(const std::vector<VkSurfaceFo
 {
     for (const auto format : formats)
     {
-        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if (format.format == VK_FORMAT_B8G8R8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
             return format;
     }
     return formats[0];

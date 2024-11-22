@@ -15,9 +15,11 @@ public:
     VulkanSwapchain(VkDevice device, VkAllocationCallbacks *allocator, VkSurfaceKHR surface,
         VkSurfaceFormatKHR surface_format, VkSurfaceCapabilitiesKHR capabilities, VkPresentModeKHR present_mode,
         VkImageUsageFlags image_usage_flags, u32 queue_family_index);
-    void destroy(VkDevice device, const VkAllocationCallbacks *allocator);
+    void destroy(const VkAllocationCallbacks *allocator);
 
-    const VkSwapchainKHR* get_vk_swapchain();
+    [[nodiscard]] VkResult acquire_next_image(u32 *image_index, VkSemaphore semaphore);
+
+    VkSwapchainKHR get_vk_swapchain();
     VkImages get_vk_images() const;
     VkImage &get_vk_image(u32 index);
     VkImageViews get_vk_image_views() const;
@@ -25,11 +27,15 @@ public:
     VkSurfaceFormatKHR get_vk_format() const;
     u32 get_vk_image_count() const;
     u32 get_vk_min_image_count() const;
+    VkExtent2D get_vk_extent() const;
 
 private:
     void create_image_views(VkDevice device, VkAllocationCallbacks *allocator, u32 image_count);
 
-    VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
+    VkSwapchainKHR m_Swapchain;
+    VkDevice m_Device;
+    VkExtent2D m_ImageExtent;
+
     VkSurfaceFormatKHR m_Format;
     VkImages m_Images;
     VkImageViews m_ImageViews;

@@ -88,7 +88,8 @@ VulkanShader::VulkanShader(const std::filesystem::path& vertex_shader_path,
         shader_create_info.stage = stage;
         shader_create_info.module = shader_module;
         shader_create_info.pName = "main";
-        vk_context->push_shader_create_info(stage, shader_create_info);
+
+        m_StageCreateInfo.push_back(shader_create_info);
         m_Modules.push_back(shader_module);
     }
 }
@@ -98,6 +99,11 @@ VulkanShader::~VulkanShader()
     VulkanContext *vk_context = VulkanContext::get_instance();
     for (const auto &module : m_Modules)
         vkDestroyShaderModule(vk_context->get_vk_logical_device(), module, vk_context->get_vk_allocator());
+}
+
+std::vector<VkPipelineShaderStageCreateInfo> &VulkanShader::get_vk_stage_create_info()
+{
+    return m_StageCreateInfo;
 }
 
 VkShaderModule VulkanShader::create_module(const std::vector<u32>& code)

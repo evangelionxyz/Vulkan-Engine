@@ -8,8 +8,11 @@
 #include "vulkan_physical_device.h"
 #include "vulkan_queue.h"
 #include "vulkan_swapchain.h"
+#include "vulkan_graphics_pipeline.h"
 
 #include <vulkan/vulkan.h>
+
+#include <glm/glm.hpp>
 
 struct GLFWwindow;
 
@@ -19,15 +22,14 @@ public:
     ~VulkanContext();
 
     void create_graphics_pipeline();
-    std::vector<VkFramebuffer> create_framebuffers(u32 width, u32 height) const;
-    void create_command_buffers(u32 count, VkCommandBuffer *command_buffers) const;
+    void create_framebuffers();
+    void create_command_buffers();
+    void free_command_buffers();
+    void destroy_framebuffers();
+    void reset_command_pool();
 
-    void free_command_buffers(std::vector<VkCommandBuffer> &command_buffers) const;
-    void destroy_framebuffers(const std::vector<VkFramebuffer> &frame_buffers) const;
-    void reset_command_pool() const;
-
-    void recreate_swapchain();
-
+    void set_clear_color(const glm::vec4 &clear_color);
+    
     VkInstance get_vk_instance() const;
     VkDevice get_vk_logical_device() const;
     VkPhysicalDevice get_vk_physical_device() const;
@@ -36,17 +38,16 @@ public:
     VkCommandPool get_vk_command_pool() const;
     VkRenderPass get_vk_render_pass() const;
     VkPipelineCache get_vk_pipeline_cache() const;
-    VkPipelineLayout get_vk_pipeline_layout() const;
-    VkPipeline get_vk_gfx_pipeline() const;
     u32 get_vk_queue_family() const;
 
     VulkanQueue *get_queue();
     VulkanSwapchain *get_swapchain();
     bool is_rebuild_swapchain() const;
-
-    void push_shader_create_info(VkShaderStageFlagBits stage, const VkPipelineShaderStageCreateInfo& create_info);
-
     static VulkanContext *get_instance();
+
+    void recreate_swapchain();
+    void present();
+    void record_command_buffer(VkCommandBuffer command_buffer, u32 image_index);
 
 private:
     void create_instance();
@@ -68,17 +69,18 @@ private:
     VkAllocationCallbacks *m_Allocator = VK_NULL_HANDLE;
     VkDescriptorPool m_DescriptorPool  = VK_NULL_HANDLE;
     VkPipelineCache m_PipelineCache    = VK_NULL_HANDLE;
-    VkPipeline m_GraphicsPipeline      = VK_NULL_HANDLE;
-    VkPipelineLayout m_PipelineLayout  = VK_NULL_HANDLE;
     VkRenderPass m_RenderPass          = VK_NULL_HANDLE;
+
+    VulkanGraphicsPipeline m_GraphicsPipeline;
 
     VulkanPhysicalDevice m_PhysicalDevice;
     VulkanSwapchain m_Swapchain;
     VulkanQueue m_Queue;
-    uint32_t m_QueueFamily             = 0;
+    u32 m_QueueFamily                  = 0;
+    VkClearValue m_ClearValue;
 
-    std::unordered_map<VkShaderStageFlagBits, VkPipelineShaderStageCreateInfo> m_ShaderStages;
-
+    std::vector<VkFramebuffer> m_Framebuffers;
+    std::vector<VkCommandBuffer> m_CommandBuffers;
     VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;
 
     bool m_RebuildSwapchain = false;

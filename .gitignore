@@ -4,3 +4,6 @@
 /res/cache/
 /out/
 /.vs/
+src/CMakeFiles
+*.vcxproj
+*.filters

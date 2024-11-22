@@ -6,7 +6,8 @@
 #include <cstdio>
 #include <vulkan/vulkan.h>
 
-VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, const VkSurfaceKHR& surface)
+VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
+    : m_Surface(surface)
 {
     u32 device_count = 0;
     VkResult result = vkEnumeratePhysicalDevices(instance, &device_count, nullptr);
@@ -62,8 +63,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, const VkSurfaceK
         m_Devices[device_index].SurfaceFormats = get_surface_format(physical_device, surface);
 
         // get surface capabilities
-        result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &current_device.SurfaceCapabilities);
-        VK_ERROR_CHECK(result, "[Vulkan] Failed to get surface capabilities");
+        current_device.SurfaceCapabilities = get_surface_capabilities(physical_device, m_Surface);
 
         vk_print_image_usage_flags(current_device.SurfaceCapabilities.supportedUsageFlags);
 
@@ -74,6 +74,14 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, const VkSurfaceK
         vkGetPhysicalDeviceMemoryProperties(physical_device, &current_device.MemoryProperties);
         vkGetPhysicalDeviceFeatures(current_device.PhysDevice, &current_device.Features);
     }
+}
+
+VkSurfaceCapabilitiesKHR  VulkanPhysicalDevice::get_surface_capabilities(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
+{
+    VkSurfaceCapabilitiesKHR capabilities;
+    VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &capabilities);
+    VK_ERROR_CHECK(result, "[Vulkan] Failed to get surface capabiliteis");
+    return capabilities;
 }
 
 u32 VulkanPhysicalDevice::select_device(VkQueueFlags required_queue_flags, bool support_present)
@@ -97,7 +105,7 @@ u32 VulkanPhysicalDevice::select_device(VkQueueFlags required_queue_flags, bool 
     return 0;
 }
 
-const PhysicalDevice& VulkanPhysicalDevice::get_selected_device() const
+PhysicalDevice VulkanPhysicalDevice::get_selected_device() const
 {
     ASSERT(m_DeviceIndex >= 0, "[Vulkan] A physical device has not been selected");
     return m_Devices[m_DeviceIndex];

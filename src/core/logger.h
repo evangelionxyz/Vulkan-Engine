@@ -46,7 +46,7 @@ public:
     void push_message(LoggingLevel level, const char *format, Args&&... args)
     {
         std::string message = format_string(format, std::forward<Args>(args)...);
-        push_message(std::move(message));
+        push_message(std::move(message), level);
     }
 
     void clear_messages()
