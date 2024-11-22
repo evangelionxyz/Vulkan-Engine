@@ -1,13 +1,14 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#include "application.h"
+
+#include "application.hpp"
 
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
-#include "logger.h"
-#include "vulkan/vulkan_context.h"
-#include "vulkan/vulkan_wrapper.h"
+#include "logger.hpp"
+#include "vulkan/vulkan_context.hpp"
+#include "vulkan/vulkan_wrapper.hpp"
 
 Application::Application(i32 argc, char **argv)
 {

@@ -1,9 +1,10 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#ifndef VULKAN_QUEUE_H
-#define VULKAN_QUEUE_H
+
+#ifndef VULKAN_QUEUE_HPP
+#define VULKAN_QUEUE_HPP
 
 #include <vulkan/vulkan.h>
-#include "core/types.h"
+#include "core/types.hpp"
 
 class VulkanQueue {
 public:

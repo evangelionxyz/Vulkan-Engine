@@ -1,6 +1,7 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#include "vulkan_queue.h"
-#include "vulkan_wrapper.h"
+
+#include "vulkan_queue.hpp"
+#include "vulkan_wrapper.hpp"
 
 VulkanQueue::VulkanQueue(VkDevice device, VkSwapchainKHR swapchain, VkAllocationCallbacks *allocator,  u32 queue_family_index, u32 queue_index)
     : m_Device(device), m_Allocator(allocator)

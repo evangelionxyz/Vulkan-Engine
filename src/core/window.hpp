@@ -1,8 +1,9 @@
 // Copyright 2024, Evangelion Manuhutu
-#ifndef WINDOW_H
-#define WINDOW_H
 
-#include "types.h"
+#ifndef WINDOW_HPP
+#define WINDOW_HPP
+
+#include "types.hpp"
 
 struct WindowData
 {

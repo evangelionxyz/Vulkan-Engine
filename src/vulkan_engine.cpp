@@ -1,6 +1,6 @@
 // Copyright 2024, Evangelion Manuhutu
-#include "core/logger.h"
-#include "core/application.h"
+#include "core/logger.hpp"
+#include "core/application.hpp"
 
 int main(i32 argc, char** argv)
 {

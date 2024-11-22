@@ -1,6 +1,7 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#include "vulkan_swapchain.h"
-#include "vulkan_wrapper.h"
+
+#include "vulkan_swapchain.hpp"
+#include "vulkan_wrapper.hpp"
 
 VulkanSwapchain::VulkanSwapchain(VkDevice device, VkAllocationCallbacks *allocator, VkSurfaceKHR surface,
     VkSurfaceFormatKHR surface_format, VkSurfaceCapabilitiesKHR capabilities,

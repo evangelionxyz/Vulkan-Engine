@@ -1,15 +1,16 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#include "vulkan_shader.h"
 
 #include <spirv_cross/spirv_cross.hpp>
 #include <spirv_cross/spirv_glsl.hpp>
 #include <shaderc/shaderc.hpp>
 
-#include <fstream>
+#include "core/assert.hpp"
+#include "core/logger.hpp"
 
-#include "vulkan_context.h"
-#include "core/assert.h"
-#include "core/logger.h"
+#include "vulkan_shader.hpp"
+#include "vulkan_context.hpp"
+
+#include <fstream>
 
 static const char *get_cached_directory()
 {

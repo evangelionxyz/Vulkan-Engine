@@ -1,7 +1,7 @@
 // Copyright 2024, Evangelion Manuhutu
 
-#include "vulkan_graphics_pipeline.h"
-#include "vulkan_wrapper.h"
+#include "vulkan_graphics_pipeline.hpp"
+#include "vulkan_wrapper.hpp"
 
 VulkanGraphicsPipeline::VulkanGraphicsPipeline(VkDevice device, VkRenderPass render_pass, VkAllocationCallbacks *allocator)
     : m_Device(device), m_RenderPass(render_pass), m_Allocator(allocator), m_Pipeline(VK_NULL_HANDLE), m_PipelineLayout(VK_NULL_HANDLE)

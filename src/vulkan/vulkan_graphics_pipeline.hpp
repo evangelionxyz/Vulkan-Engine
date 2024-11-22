@@ -1,7 +1,7 @@
 // Copyright 2024, Evangelion Manuhutu
 
-#ifndef VULKAN_GRAPHICS_PIPELINE_H
-#define VULKAN_GRAPHICS_PIPELINE_H
+#ifndef VULKAN_GRAPHICS_PIPELINE_HPP
+#define VULKAN_GRAPHICS_PIPELINE_HPP
 
 #include <vulkan/vulkan.h>
 

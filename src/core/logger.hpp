@@ -1,6 +1,7 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#ifndef LOGGER_H
-#define LOGGER_H
+
+#ifndef LOGGER_HPP
+#define LOGGER_HPP
 
 #include <vector>
 #include <chrono>

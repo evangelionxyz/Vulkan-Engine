@@ -1,6 +1,7 @@
 // Copyright 2024, Evangelion Manuhutu
-#include "window.h"
-#include "assert.h"
+
+#include "window.hpp"
+#include "assert.hpp"
 
 #include <GLFW/glfw3.h>
 

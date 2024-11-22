@@ -1,8 +1,9 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#ifndef VULKAN_SHADER_H
-#define VULKAN_SHADER_H
 
-#include "core/types.h"
+#ifndef VULKAN_SHADER_HPP
+#define VULKAN_SHADER_HPP
+
+#include "core/types.hpp"
 
 #include <vulkan/vulkan.h>
 #include <filesystem>

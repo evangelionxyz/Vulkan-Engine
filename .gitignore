@@ -7,3 +7,4 @@
 src/CMakeFiles
 *.vcxproj
 *.filters
+src/cmake_install.cmake

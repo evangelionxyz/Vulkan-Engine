@@ -1,10 +1,10 @@
 // Copyright (c) 2024, Evangelion Manuhutu
 
-#ifndef ASSERT_H
-#define ASSERT_H
+#ifndef ASSERT_HPP
+#define ASSERT_HPP
 
 #include <cstdio>
-#include "logger.h"
+#include "logger.hpp"
 
 #ifdef VK_DEBUG
 #   ifdef _WIN32

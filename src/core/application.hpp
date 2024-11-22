@@ -1,13 +1,15 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#ifndef APPLICATION_H
-#define APPLICATION_H
+#ifndef APPLICATION_HPP
+#define APPLICATION_HPP
 
 #include <memory>
 #include <vector>
-#include <vulkan/vulkan_core.h>
-#include <vulkan/vulkan_shader.h>
 
-#include "window.h"
+#include <vulkan/vulkan_core.h>
+
+#include "vulkan/vulkan_shader.hpp"
+#include "window.hpp"
+
 #include <glm/glm.hpp>
 
 class VulkanContext;

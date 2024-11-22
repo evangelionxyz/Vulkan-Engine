@@ -1,7 +1,8 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#include "vulkan_physical_device.h"
-#include "vulkan_wrapper.h"
-#include "core/assert.h"
+
+#include "vulkan_physical_device.hpp"
+#include "vulkan_wrapper.hpp"
+#include "core/assert.hpp"
 
 #include <cstdio>
 #include <vulkan/vulkan.h>

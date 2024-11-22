@@ -1,18 +1,19 @@
 // Copyright 2024, Evangelion Manuhutu
 
-#ifndef VULKAN_CONTEXT_H
-#define VULKAN_CONTEXT_H
+#ifndef VULKAN_CONTEXT_HPP
+#define VULKAN_CONTEXT_HPP
 
 #include <unordered_map>
 
-#include "vulkan_physical_device.h"
-#include "vulkan_queue.h"
-#include "vulkan_swapchain.h"
-#include "vulkan_graphics_pipeline.h"
+#include "vulkan_physical_device.hpp"
+#include "vulkan_queue.hpp"
+#include "vulkan_swapchain.hpp"
+#include "vulkan_graphics_pipeline.hpp"
 
 #include <vulkan/vulkan.h>
 
 #include <glm/glm.hpp>
+#include <functional>
 
 struct GLFWwindow;
 
@@ -29,7 +30,7 @@ public:
     void reset_command_pool();
 
     void set_clear_color(const glm::vec4 &clear_color);
-    
+
     VkInstance get_vk_instance() const;
     VkDevice get_vk_logical_device() const;
     VkPhysicalDevice get_vk_physical_device() const;
@@ -42,7 +43,6 @@ public:
 
     VulkanQueue *get_queue();
     VulkanSwapchain *get_swapchain();
-    bool is_rebuild_swapchain() const;
     static VulkanContext *get_instance();
 
     void recreate_swapchain();
@@ -58,7 +58,6 @@ private:
     void create_command_pool();
     void create_descriptor_pool();
     void create_render_pass();
-
 
     GLFWwindow* m_Window               = nullptr;
     VkInstance m_Instance              = VK_NULL_HANDLE;
@@ -78,12 +77,10 @@ private:
     VulkanQueue m_Queue;
     u32 m_QueueFamily                  = 0;
     VkClearValue m_ClearValue;
-
-    std::vector<VkFramebuffer> m_Framebuffers;
-    std::vector<VkCommandBuffer> m_CommandBuffers;
     VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;
 
-    bool m_RebuildSwapchain = false;
+    std::vector<VkFramebuffer> m_MainFrameBuffers;
+    std::vector<VkCommandBuffer> m_MainCmdBuffers;
 };
 
 #endif //VULKAN_CONTEXT_H

@@ -1,12 +1,14 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#ifndef VULKAN_WRAPPER_H
-#define VULKAN_WRAPPER_H
+
+#ifndef VULKAN_WRAPPER_HPP
+#define VULKAN_WRAPPER_HPP
+
 #include <vulkan/vulkan.h>
 #include <vector>
 
-#include "core/assert.h"
-#include "core/logger.h"
-#include "core/types.h"
+#include "core/assert.hpp"
+#include "core/logger.hpp"
+#include "core/types.hpp"
 
 template<typename... Args>
 void vk_error_check(VkResult result, Args&&... args)

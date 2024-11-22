@@ -1,14 +1,16 @@
 // Copyright 2024, Evangelion Manuhutu
-#include "vulkan_context.h"
+
+#include "vulkan_context.hpp"
 
 #include <algorithm>
 #include <cstdio>
 #include <iterator>
-#include "vulkan_wrapper.h"
-#include "core/assert.h"
-#include "core/logger.h"
 
-#include "vulkan_shader.h"
+#include "core/assert.hpp"
+#include "core/logger.hpp"
+
+#include "vulkan_wrapper.hpp"
+#include "vulkan_shader.hpp"
 
 #include <GLFW/glfw3.h>
 #include <backends/imgui_impl_vulkan.h>
@@ -55,8 +57,6 @@ VulkanContext::~VulkanContext()
 
     // destroy command buffers
     destroy_framebuffers();
-
-    vkDestroyRenderPass(m_LogicalDevice, m_RenderPass, m_Allocator);
 
     // reset command pool
     reset_command_pool();
@@ -155,7 +155,7 @@ void VulkanContext::create_render_pass()
 
 void VulkanContext::destroy_framebuffers()
 {
-    for (const auto framebuffer : m_Framebuffers)
+    for (const auto framebuffer : m_MainFrameBuffers)
         vkDestroyFramebuffer(m_LogicalDevice, framebuffer, m_Allocator);
 }
 
@@ -214,11 +214,6 @@ VulkanSwapchain* VulkanContext::get_swapchain()
     return &m_Swapchain;
 }
 
-bool VulkanContext::is_rebuild_swapchain() const
-{
-    return m_RebuildSwapchain;
-}
-
 VulkanContext *VulkanContext::get_instance()
 {
     return s_Instance;
@@ -227,7 +222,7 @@ VulkanContext *VulkanContext::get_instance()
 void VulkanContext::create_command_buffers()
 {
     const u32 image_count = m_Swapchain.get_vk_image_count();
-    m_CommandBuffers.resize(image_count);
+    m_MainCmdBuffers.resize(image_count);
 
     VkCommandBufferAllocateInfo alloc_info = {};
     alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -235,7 +230,7 @@ void VulkanContext::create_command_buffers()
     alloc_info.commandPool        = m_CommandPool;
     alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-    VkResult result = vkAllocateCommandBuffers(m_LogicalDevice, &alloc_info, m_CommandBuffers.data());
+    VkResult result = vkAllocateCommandBuffers(m_LogicalDevice, &alloc_info, m_MainCmdBuffers.data());
     VK_ERROR_CHECK(result, "[Vulkan] Failed to create command buffers");
 
     Logger::get_instance().push_message("[Vulkan] Command buffers created");
@@ -244,8 +239,8 @@ void VulkanContext::create_command_buffers()
 void VulkanContext::free_command_buffers()
 {
     m_Queue.wait_idle();
-    const u32 count = static_cast<u32>(m_CommandBuffers.size());
-    vkFreeCommandBuffers(m_LogicalDevice, m_CommandPool, count, m_CommandBuffers.data());
+    const u32 count = static_cast<u32>(m_MainCmdBuffers.size());
+    vkFreeCommandBuffers(m_LogicalDevice, m_CommandPool, count, m_MainCmdBuffers.data());
 }
 
 VkAllocationCallbacks* VulkanContext::get_vk_allocator()
@@ -511,7 +506,7 @@ void VulkanContext::create_framebuffers()
     const u32 height = m_Swapchain.get_vk_extent().height;
     const u32 image_count = static_cast<u32>(m_Swapchain.get_vk_image_count());
 
-    m_Framebuffers.resize(image_count);
+    m_MainFrameBuffers.resize(image_count);
 
     for (u32 i = 0; i < image_count; i++)
     {
@@ -525,7 +520,7 @@ void VulkanContext::create_framebuffers()
         framebuffer_create_info.pAttachments    = attachments;
         framebuffer_create_info.attachmentCount = std::size(attachments);
 
-        VkResult result = vkCreateFramebuffer(m_LogicalDevice, &framebuffer_create_info, m_Allocator, &m_Framebuffers[i]);
+        VkResult result = vkCreateFramebuffer(m_LogicalDevice, &framebuffer_create_info, m_Allocator, &m_MainFrameBuffers[i]);
         VK_ERROR_CHECK(result, "[Vulkan] Failed to create framebuffer");
     }
     Logger::get_instance().push_message("[Vulkan] Frame buffer created");
@@ -555,7 +550,8 @@ void VulkanContext::record_command_buffer(VkCommandBuffer command_buffer, u32 im
     begin_info.pNext = VK_NULL_HANDLE;
     begin_info.pInheritanceInfo = VK_NULL_HANDLE;
 
-    const VkClearValue clear_color = {
+    const VkClearValue clear_color = 
+    {
         m_ClearValue.color.float32[0], 
         m_ClearValue.color.float32[1], 
         m_ClearValue.color.float32[2], 
@@ -563,8 +559,9 @@ void VulkanContext::record_command_buffer(VkCommandBuffer command_buffer, u32 im
     };
 
     const VkRect2D render_area = { { 0, 0 },
-    { static_cast<u32>(width), 
-      static_cast<u32>(height) 
+    { 
+        static_cast<u32>(width), 
+        static_cast<u32>(height) 
     }};
 
     VkRenderPassBeginInfo render_pass_begin_info = {};
@@ -572,7 +569,7 @@ void VulkanContext::record_command_buffer(VkCommandBuffer command_buffer, u32 im
     render_pass_begin_info.pNext           = VK_NULL_HANDLE;
     render_pass_begin_info.renderPass      = m_RenderPass;
     render_pass_begin_info.renderArea      = render_area;
-    render_pass_begin_info.framebuffer     = m_Framebuffers[image_index];
+    render_pass_begin_info.framebuffer     = m_MainFrameBuffers[image_index];
     render_pass_begin_info.clearValueCount = 1;
     render_pass_begin_info.pClearValues    = &clear_color;
 
@@ -625,10 +622,10 @@ void VulkanContext::present()
     }
 
     m_Queue.wait_and_reset_fences();
-    vkResetCommandBuffer(m_CommandBuffers[image_index], 0);
-    record_command_buffer(m_CommandBuffers[image_index], image_index);
+    vkResetCommandBuffer(m_MainCmdBuffers[image_index], 0);
+    record_command_buffer(m_MainCmdBuffers[image_index], image_index);
 
-    m_Queue.submit_async(m_CommandBuffers[image_index]);
+    m_Queue.submit_async(m_MainCmdBuffers[image_index]);
 
     result = m_Queue.present(image_index, m_Swapchain.get_vk_swapchain());
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)

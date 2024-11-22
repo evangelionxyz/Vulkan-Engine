@@ -1,6 +1,7 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#ifndef TYPES_H
-#define TYPES_H
+
+#ifndef TYPES_HPP
+#define TYPES_HPP
 
 #include <memory>
 

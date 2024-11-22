@@ -1,8 +1,9 @@
-// Copyright (c) 2024, Evangelion Manuhutu#ifndef VULKAN_PHYSICAL_DEVICE_H
-#ifndef VULKAN_PHYSICAL_DEVICE_H
-#define VULKAN_PHYSICAL_DEVICE_H
+// Copyright (c) 2024, Evangelion Manuhutu
 
-#include "core/types.h"
+#ifndef VULKAN_PHYSICAL_DEVICE_HPP
+#define VULKAN_PHYSICAL_DEVICE_HPP
+
+#include "core/types.hpp"
 #include <vulkan/vulkan.h>
 #include <vector>
 

@@ -1,10 +1,12 @@
 // Copyright (c) 2024, Evangelion Manuhutu
-#ifndef VULKAN_SWAPCHAIN_H
-#define VULKAN_SWAPCHAIN_H
+
+#ifndef VULKAN_SWAPCHAIN_HPP
+#define VULKAN_SWAPCHAIN_HPP
+
 #include <vulkan/vulkan_core.h>
 #include <vector>
 
-#include "core/types.h"
+#include "core/types.hpp"
 
 class VulkanSwapchain {
 public:
