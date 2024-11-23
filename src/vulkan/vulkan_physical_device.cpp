@@ -22,13 +22,13 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, VkSurfaceKHR sur
     for (u32 device_index = 0; device_index < device_count; device_index++)
     {
         VkPhysicalDevice physical_device = temp_devices[device_index];
-        m_Devices[device_index].PhysDevice = physical_device;
+        m_Devices[device_index].device = physical_device;
         PhysicalDevice &current_device = m_Devices[device_index];
 
-        vkGetPhysicalDeviceProperties(physical_device, &current_device.Properties);
-        Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Device name: {}", current_device.Properties.deviceName);
-        u32 apiVersion = current_device.Properties.apiVersion;
-        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] API Version {}.{1}.{2}.{3}",
+        vkGetPhysicalDeviceProperties(physical_device, &current_device.properties);
+        Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Device name: {}", current_device.properties.deviceName);
+        u32 apiVersion = current_device.properties.apiVersion;
+        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] API Version {}.{}.{}.{}",
             VK_API_VERSION_VARIANT(apiVersion),
             VK_API_VERSION_MAJOR(apiVersion),
             VK_API_VERSION_MINOR(apiVersion),
@@ -38,42 +38,46 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, VkSurfaceKHR sur
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, nullptr);
         Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Queue Family Count: {}", queue_families_count);
 
-        current_device.QueueFamilyProperties.resize(queue_families_count);
-        current_device.QueueSupportPresent.resize(queue_families_count);
+        current_device.queue_family_properties.resize(queue_families_count);
+        current_device.queue_support_present.resize(queue_families_count);
 
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count,
-            current_device.QueueFamilyProperties.data());
+            current_device.queue_family_properties.data());
 
         for (u32 queue_index = 0; queue_index < queue_families_count; queue_index++)
         {
-            const VkQueueFamilyProperties& queue_family_properties = current_device.QueueFamilyProperties[queue_index];
-            Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Family {} Num Queues: {1}", queue_index, queue_families_count);
+            const VkQueueFamilyProperties& queue_family_properties = current_device.queue_family_properties[queue_index];
+
+            Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Family {} Num Queues: {}", queue_index, queue_families_count);
+
             VkQueueFlags flags = queue_family_properties.queueFlags;
-            Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] GFX {}, Compute {1}, Transfer {2}, Sparse binding {3}",
-                (flags & VK_QUEUE_GRAPHICS_BIT) ? "Yes" : "No",
-                (flags & VK_QUEUE_COMPUTE_BIT) ? "Yes" : "No",
-                (flags & VK_QUEUE_TRANSFER_BIT) ? "Yes" : "No",
+
+            Logger::get_instance().push_message(LoggingLevel::Info,
+                "\t[Vulkan] GFX {}, Compute {}, Transfer {}, Sparse binding {}",
+                (flags & VK_QUEUE_GRAPHICS_BIT)       ? "Yes" : "No",
+                (flags & VK_QUEUE_COMPUTE_BIT)        ? "Yes" : "No",
+                (flags & VK_QUEUE_TRANSFER_BIT)       ? "Yes" : "No",
                 (flags & VK_QUEUE_SPARSE_BINDING_BIT) ? "Yes" : "No"
             );
             result = vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, queue_index, surface,
-                &current_device.QueueSupportPresent[queue_index]);
+                &current_device.queue_support_present[queue_index]);
             VK_ERROR_CHECK(result, "[Vulkan] Failed to get physical surface support");
         }
 
         // get physical surface format
-        m_Devices[device_index].SurfaceFormats = get_surface_format(physical_device, surface);
+        m_Devices[device_index].surface_formats = get_surface_format(physical_device, surface);
 
         // get surface capabilities
-        current_device.SurfaceCapabilities = get_surface_capabilities(physical_device, m_Surface);
+        current_device.surface_capabilities = get_surface_capabilities(physical_device, m_Surface);
 
-        vk_print_image_usage_flags(current_device.SurfaceCapabilities.supportedUsageFlags);
+        vk_print_image_usage_flags(current_device.surface_capabilities.supportedUsageFlags);
 
         // get present modes
-        current_device.PresentModes = get_surface_present_modes(physical_device, surface);
+        current_device.present_modes = get_surface_present_modes(physical_device, surface);
 
         // get memory properties and features
-        vkGetPhysicalDeviceMemoryProperties(physical_device, &current_device.MemoryProperties);
-        vkGetPhysicalDeviceFeatures(current_device.PhysDevice, &current_device.Features);
+        vkGetPhysicalDeviceMemoryProperties(physical_device, &current_device.memory_properties);
+        vkGetPhysicalDeviceFeatures(current_device.device, &current_device.fetures);
     }
 }
 
@@ -89,11 +93,11 @@ u32 VulkanPhysicalDevice::select_device(VkQueueFlags required_queue_flags, bool 
 {
     for (i32 device_index = 0; device_index < m_Devices.size(); device_index++)
     {
-        for (i32 queue_index = 0; queue_index < static_cast<i32>(m_Devices[device_index].QueueFamilyProperties.size()); queue_index++)
+        for (i32 queue_index = 0; queue_index < static_cast<i32>(m_Devices[device_index].queue_family_properties.size()); queue_index++)
         {
-            const VkQueueFamilyProperties &queue_properties = m_Devices[device_index].QueueFamilyProperties[queue_index];
+            const VkQueueFamilyProperties &queue_properties = m_Devices[device_index].queue_family_properties[queue_index];
             if ((queue_properties.queueFlags & required_queue_flags)
-                && (m_Devices[device_index].QueueSupportPresent[queue_index] == static_cast<VkBool32>(support_present)))
+                && (m_Devices[device_index].queue_support_present[queue_index] == static_cast<VkBool32>(support_present)))
             {
                 m_DeviceIndex = device_index;
                 const i32 queue_family = queue_index;

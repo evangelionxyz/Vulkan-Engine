@@ -46,7 +46,7 @@ static std::string vulkan_shader_stage_str(const VkShaderStageFlagBits stage)
     case VK_SHADER_STAGE_FRAGMENT_BIT: return "Fragment";
     case VK_SHADER_STAGE_COMPUTE_BIT: return "Compute";
     case VK_SHADER_STAGE_GEOMETRY_BIT: return "Geometry";
-    case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT: return "Tesselation";
+    case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT: return "Tessellation";
     default: return "Invalid";
     }
 }
@@ -99,7 +99,9 @@ VulkanShader::~VulkanShader()
 {
     VulkanContext *vk_context = VulkanContext::get_instance();
     for (const auto &module : m_Modules)
+    {
         vkDestroyShaderModule(vk_context->get_vk_logical_device(), module, vk_context->get_vk_allocator());
+    }
 }
 
 std::vector<VkPipelineShaderStageCreateInfo> &VulkanShader::get_vk_stage_create_info()
@@ -136,14 +138,14 @@ std::string VulkanShader::read_file(const std::filesystem::path& file_path)
         }
         else
         {
-            Logger::get_instance().push_message(LoggingLevel::Error, "[Vulkan Shader] Could not read from file. {0}", file_path.string());
+            Logger::get_instance().push_message(LoggingLevel::Error, "[Vulkan Shader] Could not read from file. {}", file_path.string());
         }
 
         shader_in.close();
     }
     else
     {
-        Logger::get_instance().push_message(LoggingLevel::Error, "[Vulkan Shader] Could not open file. {0}", file_path.string());
+        Logger::get_instance().push_message(LoggingLevel::Error, "[Vulkan Shader] Could not open file. {}", file_path.string());
     }
     return result;
 }
@@ -177,7 +179,7 @@ std::vector<u32> VulkanShader::compile_or_get_vulkan_binaries(const std::string&
         shaderc::Compiler compiler;
         shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(shader_source, vulkan_shader_to_shaderc_kind(stage), file_path.c_str());
         bool success = module.GetCompilationStatus() == shaderc_compilation_status_success;
-        ASSERT(success, "[Vulkan Shader] Compilation failed {0}", module.GetErrorMessage().c_str());
+        ASSERT(success, "[Vulkan Shader] Compilation failed {}", module.GetErrorMessage().c_str());
         code = std::vector<u32>(module.cbegin(), module.cend());
 
         std::ofstream out_file(cached_path, std::ios::binary);
@@ -200,9 +202,9 @@ void VulkanShader::reflect(const VkShaderStageFlagBits shader_stage, const std::
     spirv_cross::Compiler compiler(code);
     spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
-    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader] Shader reflect - {0}", vulkan_shader_stage_str(shader_stage));
-    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    {0} Uniform buffers", resources.uniform_buffers.size());
-    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    {0} Resources", resources.sampled_images.size());
+    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader] Shader reflect - {}", vulkan_shader_stage_str(shader_stage));
+    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    {} Uniform buffers", resources.uniform_buffers.size());
+    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    {} Resources", resources.sampled_images.size());
 
     if (!resources.uniform_buffers.empty())
     {
@@ -214,10 +216,10 @@ void VulkanShader::reflect(const VkShaderStageFlagBits shader_stage, const std::
             u32 binding = compiler.get_decoration(uniform_buffer.id, spv::DecorationBinding);
             size_t member_count = buffer_type.member_types.size();
 
-            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    Name = {0}", uniform_buffer.name);
-            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    Size = {0}", buffer_size);
-            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader] Binding = {0}", binding);
-            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader] Members = {0}", member_count);
+            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    Name = {}", uniform_buffer.name);
+            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader]    Size = {}", buffer_size);
+            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader] Binding = {}", binding);
+            Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan Shader] Members = {}", member_count);
         }
     }
 }

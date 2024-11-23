@@ -13,12 +13,11 @@
 Application::Application(i32 argc, char **argv)
 {
     m_Window = CreateScope<Window>(1024, 720, "Vulkan Engine");
-    m_Vk = CreateScope<VulkanContext>(m_Window->get_native_window());
 }
 
 Application::~Application()
 {
-    m_Vk->get_queue()->wait_idle();
+    m_Window->get_vk_context()->get_queue()->wait_idle();
     imgui_shutdown();
 }
 
@@ -36,9 +35,14 @@ void Application::run()
             ImGui::ColorEdit4("clear color", &m_ClearColor[0]);
             ImGui::End();
             imgui_end();
+
+            m_Window->submit([&](VkCommandBuffer command_buffer)
+            {
+                ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer);
+            });
         }
-        m_Vk->set_clear_color(m_ClearColor);
-        m_Vk->present();
+
+        m_Window->present(m_ClearColor);
     }
 }
 
@@ -60,19 +64,19 @@ void Application::imgui_init()
     ImGui_ImplGlfw_InitForVulkan(m_Window->get_native_window(), install_callbacks);
 
     ImGui_ImplVulkan_InitInfo init_info = {};
-    init_info.Instance = m_Vk->get_vk_instance();
-    init_info.PhysicalDevice = m_Vk->get_vk_physical_device();
-    init_info.Device = m_Vk->get_vk_logical_device();
-    init_info.QueueFamily = m_Vk->get_vk_queue_family();
-    init_info.Queue = m_Vk->get_queue()->get_vk_queue();
-    init_info.PipelineCache = m_Vk->get_vk_pipeline_cache();
-    init_info.DescriptorPool = m_Vk->get_vk_descriptor_pool();
-    init_info.RenderPass = m_Vk->get_vk_render_pass();
+    init_info.Instance = m_Window->get_vk_context()->get_vk_instance();
+    init_info.PhysicalDevice = m_Window->get_vk_context()->get_vk_physical_device();
+    init_info.Device = m_Window->get_vk_context()->get_vk_logical_device();
+    init_info.QueueFamily = m_Window->get_vk_context()->get_vk_queue_family();
+    init_info.Queue = m_Window->get_vk_context()->get_queue()->get_vk_queue();
+    init_info.PipelineCache = m_Window->get_vk_context()->get_vk_pipeline_cache();
+    init_info.DescriptorPool = m_Window->get_vk_context()->get_vk_descriptor_pool();
+    init_info.RenderPass = m_Window->get_vk_context()->get_vk_render_pass();
     init_info.Subpass = 0;
-    init_info.MinImageCount = m_Vk->get_swapchain()->get_vk_min_image_count();
-    init_info.ImageCount = m_Vk->get_swapchain()->get_vk_image_count();
+    init_info.MinImageCount = m_Window->get_vk_context()->get_swapchain()->get_vk_min_image_count();
+    init_info.ImageCount = m_Window->get_vk_context()->get_swapchain()->get_vk_image_count();
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-    init_info.Allocator = m_Vk->get_vk_allocator();
+    init_info.Allocator = m_Window->get_vk_context()->get_vk_allocator();
     init_info.CheckVkResultFn = VK_NULL_HANDLE;
     ImGui_ImplVulkan_Init(&init_info);
 }

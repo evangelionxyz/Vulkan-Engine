@@ -5,10 +5,11 @@
 
 #include <unordered_map>
 
-#include "vulkan_physical_device.hpp"
 #include "vulkan_queue.hpp"
 #include "vulkan_swapchain.hpp"
+#include "vulkan_physical_device.hpp"
 #include "vulkan_graphics_pipeline.hpp"
+#include "vulkan_buffer.hpp"
 
 #include <vulkan/vulkan.h>
 
@@ -16,10 +17,11 @@
 #include <functional>
 
 struct GLFWwindow;
+class Window;
 
 class VulkanContext {
 public:
-    explicit VulkanContext(GLFWwindow *window);
+    explicit VulkanContext(Window *window);
     ~VulkanContext();
 
     void create_graphics_pipeline();
@@ -49,17 +51,19 @@ public:
     void present();
     void record_command_buffer(VkCommandBuffer command_buffer, u32 image_index);
 
-private:
     void create_instance();
     void create_debug_callback();
     void create_window_surface();
     void create_device();
+
     void create_swapchain();
+
     void create_command_pool();
     void create_descriptor_pool();
     void create_render_pass();
 
-    GLFWwindow* m_Window               = nullptr;
+private:
+    Window* m_Window                   = nullptr;
     VkInstance m_Instance              = VK_NULL_HANDLE;
     VkDevice m_LogicalDevice           = VK_NULL_HANDLE;
 
@@ -77,6 +81,9 @@ private:
     VulkanQueue m_Queue;
     u32 m_QueueFamily                  = 0;
     VkClearValue m_ClearValue;
+
+    Ref<VulkanVertexBuffer> m_Buffer;
+
     VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;
 
     std::vector<VkFramebuffer> m_MainFrameBuffers;

@@ -12,11 +12,17 @@
 #include "vulkan_wrapper.hpp"
 #include "vulkan_shader.hpp"
 
+#include "core/window.hpp"
+
 #include <GLFW/glfw3.h>
 #include <backends/imgui_impl_vulkan.h>
 
+#include <queue>
+#include <functional>
+
 static VulkanContext *s_Instance = nullptr;
-VulkanContext::VulkanContext(GLFWwindow* window)
+
+VulkanContext::VulkanContext(Window *window)
     : m_Window(window)
 {
     s_Instance = this;
@@ -39,7 +45,7 @@ VulkanContext::VulkanContext(GLFWwindow* window)
     m_Queue = VulkanQueue(m_LogicalDevice, m_Swapchain.get_vk_swapchain(), m_Allocator, m_QueueFamily, 0);
     create_descriptor_pool();
 
-    m_GraphicsPipeline = VulkanGraphicsPipeline(m_LogicalDevice, m_RenderPass, m_Allocator);
+    m_GraphicsPipeline = VulkanGraphicsPipeline(m_LogicalDevice, m_Allocator);
 
     create_graphics_pipeline();
 
@@ -51,6 +57,8 @@ VulkanContext::VulkanContext(GLFWwindow* window)
 VulkanContext::~VulkanContext()
 {
     Logger::get_instance().push_message("=== Destroying Vulkan ===");
+
+    m_Buffer->destroy();
 
     // free command buffers
     free_command_buffers();
@@ -147,9 +155,8 @@ void VulkanContext::create_render_pass()
     render_pass_info.dependencyCount = 1;
     render_pass_info.pDependencies   = &subpass_dependency;
 
-    VK_ERROR_CHECK(vkCreateRenderPass(m_LogicalDevice, &render_pass_info, m_Allocator, &m_RenderPass),
-                   "[Vulkan] Failed to create render pass");
-
+    VkResult result = vkCreateRenderPass(m_LogicalDevice, &render_pass_info, m_Allocator, &m_RenderPass);
+    VK_ERROR_CHECK(result, "[Vulkan] Failed to create render pass");
     Logger::get_instance().push_message("[Vulkan] Render pass created");
 }
 
@@ -162,8 +169,9 @@ void VulkanContext::destroy_framebuffers()
 void VulkanContext::reset_command_pool()
 {
     m_Queue.wait_idle();
-    VK_ERROR_CHECK(vkResetCommandPool(m_LogicalDevice, m_CommandPool, 0),
-        "[Vulkan] Failed to reset command pool");
+
+    VkResult result = vkResetCommandPool(m_LogicalDevice, m_CommandPool, 0);
+    VK_ERROR_CHECK(result, "[Vulkan] Failed to reset command pool");
 }
 
 void VulkanContext::set_clear_color(const glm::vec4 &clear_color)
@@ -181,7 +189,7 @@ VkInstance VulkanContext::get_vk_instance() const
 
 VkPhysicalDevice VulkanContext::get_vk_physical_device() const
 {
-    return m_PhysicalDevice.get_selected_device().PhysDevice;
+    return m_PhysicalDevice.get_selected_device().device;
 }
 
 VkDescriptorPool VulkanContext::get_vk_descriptor_pool()
@@ -321,7 +329,7 @@ void VulkanContext::create_debug_callback()
 
 void VulkanContext::create_window_surface()
 {
-    const VkResult res = glfwCreateWindowSurface(m_Instance, m_Window, m_Allocator, &m_Surface);
+    const VkResult res = glfwCreateWindowSurface(m_Instance, m_Window->get_native_window(), m_Allocator, &m_Surface);
     VK_ERROR_CHECK(res, "[Vulkan] Failed to create window surface");
     Logger::get_instance().push_message("[Vulkan] Window surface created");
 }
@@ -337,11 +345,11 @@ void VulkanContext::create_device()
 
     const char *device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME };
 
-    if (m_PhysicalDevice.get_selected_device().Features.geometryShader == VK_FALSE)
+    if (m_PhysicalDevice.get_selected_device().fetures.geometryShader == VK_FALSE)
         Logger::get_instance().push_message("[Vulkan] Geometry shader is not supported", LoggingLevel::Error);
 
-    if (m_PhysicalDevice.get_selected_device().Features.tessellationShader == VK_FALSE)
-        Logger::get_instance().push_message("[Vulkan] Tesselation shader is not supported", LoggingLevel::Error);
+    if (m_PhysicalDevice.get_selected_device().fetures.tessellationShader == VK_FALSE)
+        Logger::get_instance().push_message("[Vulkan] Tessellation shader is not supported", LoggingLevel::Error);
 
     VkPhysicalDeviceFeatures device_features = { 0 };
     device_features.geometryShader = VK_TRUE;
@@ -359,16 +367,17 @@ void VulkanContext::create_device()
     create_info.ppEnabledExtensionNames = device_extensions;
     create_info.pEnabledFeatures        = &device_features;
 
-    const VkResult result = vkCreateDevice(m_PhysicalDevice.get_selected_device().PhysDevice, &create_info, m_Allocator, &m_LogicalDevice);
+    const VkResult result = vkCreateDevice(m_PhysicalDevice.get_selected_device().device, &create_info, m_Allocator, &m_LogicalDevice);
     VK_ERROR_CHECK(result, "[Vulkan] Failed to create logical device");
     Logger::get_instance().push_message("[Vulkan] Logical device created");
 }
 
 void VulkanContext::create_swapchain()
 {
-    i32 width, height;
-    glfwGetFramebufferSize(m_Window, &width, &height);
-    VkSurfaceCapabilitiesKHR capabilities = VulkanPhysicalDevice::get_surface_capabilities(m_PhysicalDevice.get_selected_device().PhysDevice, m_Surface);
+    u32 width = m_Window->get_framebuffer_width();
+    u32 height = m_Window->get_framebuffer_height();
+
+    VkSurfaceCapabilitiesKHR capabilities = VulkanPhysicalDevice::get_surface_capabilities(m_PhysicalDevice.get_selected_device().device, m_Surface);
 
     const VkExtent2D swapchain_extent = { 
         static_cast<u32>(width), 
@@ -387,10 +396,10 @@ void VulkanContext::create_swapchain()
         capabilities.maxImageExtent.height
     );
 
-    const std::vector<VkPresentModeKHR> &present_modes = m_PhysicalDevice.get_selected_device().PresentModes;
+    const std::vector<VkPresentModeKHR> &present_modes = m_PhysicalDevice.get_selected_device().present_modes;
     const VkPresentModeKHR present_mode = vk_choose_present_mode(present_modes);
 
-    VkSurfaceFormatKHR format = vk_choose_surface_format(m_PhysicalDevice.get_selected_device().SurfaceFormats);
+    VkSurfaceFormatKHR format = vk_choose_surface_format(m_PhysicalDevice.get_selected_device().surface_formats);
     VkImageUsageFlags image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     m_Swapchain = VulkanSwapchain(m_LogicalDevice, m_Allocator, m_Surface, 
         format, capabilities, present_mode, image_usage, m_QueueFamily);
@@ -441,10 +450,25 @@ void VulkanContext::create_graphics_pipeline()
 {
     Ref<VulkanShader> shader = CreateRef<VulkanShader>("res/shaders/default.vert", "res/shaders/default.frag");
 
+    std::vector<Vertex> vertices = {
+        {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Position, Color
+        {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
+    VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
+
+    m_Buffer = CreateRef<VulkanVertexBuffer>(m_LogicalDevice, m_PhysicalDevice.get_selected_device().device, buffer_size, m_Allocator);
+    copy_data_to_buffer(m_LogicalDevice, m_Buffer->get_buffer_memory(), vertices.data(), buffer_size);
+
+    auto binding_desc = Vertex::get_vk_binding_desc();
+    auto attr_desc = Vertex::get_vk_attribute_desc();
+
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
     vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_input_info.vertexAttributeDescriptionCount = 0;
-    vertex_input_info.vertexBindingDescriptionCount = 0;
+    vertex_input_info.vertexBindingDescriptionCount = 1;
+    vertex_input_info.vertexAttributeDescriptionCount = static_cast<u32>(attr_desc.size());
+    vertex_input_info.pVertexBindingDescriptions = &binding_desc;
+    vertex_input_info.pVertexAttributeDescriptions = attr_desc.data();
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {};
     input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -452,23 +476,23 @@ void VulkanContext::create_graphics_pipeline()
     input_assembly_info.primitiveRestartEnable = VK_FALSE;
 
     VkPipelineRasterizationStateCreateInfo rasterization_info = {};
-    rasterization_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterization_info.depthClampEnable = VK_FALSE;
+    rasterization_info.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization_info.depthClampEnable        = VK_FALSE;
     rasterization_info.rasterizerDiscardEnable = VK_FALSE;
-    rasterization_info.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterization_info.lineWidth = 1.0f;
-    rasterization_info.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterization_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    rasterization_info.depthBiasEnable = VK_FALSE;
+    rasterization_info.polygonMode             = VK_POLYGON_MODE_FILL;
+    rasterization_info.lineWidth               = 1.0f;
+    rasterization_info.cullMode                = VK_CULL_MODE_BACK_BIT;
+    rasterization_info.frontFace               = VK_FRONT_FACE_CLOCKWISE;
+    rasterization_info.depthBiasEnable         = VK_FALSE;
 
     VkPipelineMultisampleStateCreateInfo multisample_info = {};
     multisample_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisample_info.sampleShadingEnable = VK_FALSE;
+    multisample_info.sampleShadingEnable  = VK_FALSE;
     multisample_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendAttachmentState color_blend_attachment = {};
     color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    color_blend_attachment.blendEnable = VK_FALSE;
+    color_blend_attachment.blendEnable    = VK_FALSE;
 
     VkPipelineColorBlendStateCreateInfo color_blend_info = {};
     color_blend_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -486,7 +510,8 @@ void VulkanContext::create_graphics_pipeline()
     pipeline_layout_info.setLayoutCount = 0;
     pipeline_layout_info.pushConstantRangeCount = 0;
 
-    VkViewport viewport = { 0.0f, 0.0f,
+    VkViewport viewport = { 
+        0.0f, 0.0f,
         static_cast<float>(m_Swapchain.get_vk_extent().width),
         static_cast<float>(m_Swapchain.get_vk_extent().height),
         0.0f, 1.0f
@@ -494,16 +519,26 @@ void VulkanContext::create_graphics_pipeline()
 
     VkRect2D scissor = { {0, 0}, m_Swapchain.get_vk_extent() };
 
-    m_GraphicsPipeline.create(shader->get_vk_stage_create_info(),
-        vertex_input_info, input_assembly_info, viewport, scissor,
-        rasterization_info, multisample_info, color_blend_info,
-        pipeline_layout_info);
+    PipelineCreateInfo pipeline_create_info;
+    pipeline_create_info.shader = shader;
+    pipeline_create_info.input_assembly_info = input_assembly_info;
+    pipeline_create_info.input_vertex_info = vertex_input_info;
+    pipeline_create_info.render_pass = m_RenderPass;
+    pipeline_create_info.scissor = scissor;
+    pipeline_create_info.viewport = viewport;
+    pipeline_create_info.multisample_info = multisample_info;
+    pipeline_create_info.color_blend_info = color_blend_info;
+    pipeline_create_info.rasterization_info = rasterization_info;
+    pipeline_create_info.layout_info = pipeline_layout_info;
+
+    m_GraphicsPipeline.create(pipeline_create_info);
 }
 
 void VulkanContext::create_framebuffers()
 {
     const u32 width = m_Swapchain.get_vk_extent().width;
     const u32 height = m_Swapchain.get_vk_extent().height;
+
     const u32 image_count = static_cast<u32>(m_Swapchain.get_vk_image_count());
 
     m_MainFrameBuffers.resize(image_count);
@@ -536,71 +571,52 @@ void VulkanContext::recreate_swapchain()
 
     create_swapchain();
 
+    const u32 w = m_Swapchain.get_vk_extent().width;
+    const u32 h = m_Swapchain.get_vk_extent().height;
+    m_GraphicsPipeline.resize(w, h);
+
     create_framebuffers();
 }
 
 void VulkanContext::record_command_buffer(VkCommandBuffer command_buffer, u32 image_index)
 {
-    i32 width, height;
-    glfwGetFramebufferSize(m_Window, &width, &height);
-
+    // 1. begin command buffer
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     begin_info.pNext = VK_NULL_HANDLE;
     begin_info.pInheritanceInfo = VK_NULL_HANDLE;
+    vkBeginCommandBuffer(command_buffer, &begin_info);
 
-    const VkClearValue clear_color = 
-    {
-        m_ClearValue.color.float32[0], 
-        m_ClearValue.color.float32[1], 
-        m_ClearValue.color.float32[2], 
-        1.0f 
-    };
+    // 2. begin render pass
+    const u32 width = m_Swapchain.get_vk_extent().width;
+    const u32 height = m_Swapchain.get_vk_extent().height;
+    m_GraphicsPipeline.begin_render_pass(command_buffer, m_MainFrameBuffers[image_index], m_ClearValue, width, height);
 
-    const VkRect2D render_area = { { 0, 0 },
-    { 
-        static_cast<u32>(width), 
-        static_cast<u32>(height) 
-    }};
+    // 3. begin pipeline
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline.get_vk_pipeline());    
 
-    VkRenderPassBeginInfo render_pass_begin_info = {};
-    render_pass_begin_info.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    render_pass_begin_info.pNext           = VK_NULL_HANDLE;
-    render_pass_begin_info.renderPass      = m_RenderPass;
-    render_pass_begin_info.renderArea      = render_area;
-    render_pass_begin_info.framebuffer     = m_MainFrameBuffers[image_index];
-    render_pass_begin_info.clearValueCount = 1;
-    render_pass_begin_info.pClearValues    = &clear_color;
-
-    vkBeginCommandBuffer(command_buffer, &begin_info); // command buffer
-
-    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE); // render pass
-
-    // create viewport
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline.get_vk_pipeline());
-    VkViewport viewport = {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(width);
-    viewport.height = static_cast<float>(height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
-
-    VkRect2D scissor = {};
-    scissor.offset = { 0, 0 };
-    scissor.extent = { 
-        static_cast<u32>(width), 
-        static_cast<u32>(height) 
-    };
+    VkViewport vp = m_GraphicsPipeline.get_vk_viewport();
+    VkRect2D scissor = m_GraphicsPipeline.get_vk_scissor();
+    vkCmdSetViewport(command_buffer, 0, 1, &vp);
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
-    vkCmdDraw(command_buffer, 3, 1, 0, 0);
+
+    VkBuffer vertexBuffers[] = { m_Buffer->get_buffer() };
+    VkDeviceSize offsets[] = { 0 };
+    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+    vkCmdDraw(command_buffer, 15, 1, 0, 0);
 
     // record dear imgui primitives into command buffer
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer);
 
-    vkCmdEndRenderPass(command_buffer); // !render pass
+    auto command_queue = m_Window->get_command_queue();
+    while (!command_queue.empty())
+    {
+        auto &func = command_queue.front();
+        func(command_buffer);
+        command_queue.pop();
+    }
+
+    m_GraphicsPipeline.end_render_pass(command_buffer);
 
     vkEndCommandBuffer(command_buffer); // !command buffer
 }

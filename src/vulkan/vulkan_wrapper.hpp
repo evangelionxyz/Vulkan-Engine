@@ -63,7 +63,7 @@ static VkPresentModeKHR vk_choose_present_mode(const std::vector<VkPresentModeKH
     {
         if (mode == VK_PRESENT_MODE_MAILBOX_KHR) return mode;
     }
-    return present_modes[0];
+    return VK_PRESENT_MODE_FIFO_KHR;
 }
 
 static u32 vk_choose_images_count(const VkSurfaceCapabilitiesKHR &capabilities)
@@ -81,7 +81,7 @@ static VkSurfaceFormatKHR vk_choose_surface_format(const std::vector<VkSurfaceFo
 {
     for (const auto format : formats)
     {
-        if (format.format == VK_FORMAT_B8G8R8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if (format.format == VK_FORMAT_B8G8R8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
             return format;
     }
     return formats[0];

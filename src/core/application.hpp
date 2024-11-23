@@ -27,7 +27,6 @@ private:
     void imgui_shutdown() const;
 
     Scope<Window> m_Window;
-    Ref<VulkanContext> m_Vk;
     glm::vec4 m_ClearColor = glm::vec4(0.0f);
 };
 

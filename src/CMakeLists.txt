@@ -7,6 +7,7 @@ add_executable(Vulkan
     vulkan/vulkan_physical_device.cpp
     vulkan/vulkan_queue.cpp
     vulkan/vulkan_swapchain.cpp
+    vulkan/vulkan_buffer.cpp
     vulkan/vulkan_graphics_pipeline.cpp
 )
 

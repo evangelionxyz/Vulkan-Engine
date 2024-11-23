@@ -21,6 +21,8 @@ public:
 
     [[nodiscard]] VkResult acquire_next_image(u32 *image_index, VkSemaphore semaphore);
 
+    void begin_render_pass(VkCommandBuffer command_bufferm, VkRenderPass render_pass, VkFramebuffer framebuffer, VkClearValue clear_color);
+
     VkSwapchainKHR get_vk_swapchain();
     VkImages get_vk_images() const;
     VkImage &get_vk_image(u32 index);

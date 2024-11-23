@@ -3,6 +3,8 @@
 #include "window.hpp"
 #include "assert.hpp"
 
+#include "vulkan/vulkan_context.hpp"
+
 #include <GLFW/glfw3.h>
 
 #ifdef _WIN32
@@ -24,6 +26,7 @@ Window::Window(const i32 width, const i32 height, const char* title)
     
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
+
     // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     m_Window = glfwCreateWindow(width, height, title, nullptr, nullptr);
@@ -47,6 +50,8 @@ Window::Window(const i32 width, const i32 height, const char* title)
     setup_callbacks();
 
     Logger::get_instance().push_message("[Window] Window created");
+
+    m_Vk = CreateScope<VulkanContext>(this);
 }
 
 Window::~Window()
@@ -64,6 +69,22 @@ bool Window::is_looping() const
 void Window::poll_events()
 {
     glfwPollEvents();
+}
+
+void Window::present(const glm::vec4 &clear_color)
+{
+    m_Vk->set_clear_color(clear_color);
+    m_Vk->present();
+}
+
+void Window::submit(std::function<void(VkCommandBuffer command_buffer)> func)
+{
+    m_CommandFuncs.push(func);
+}
+
+std::queue<std::function<void(VkCommandBuffer command_buffer)>> &Window::get_command_queue()
+{
+    return m_CommandFuncs;
 }
 
 void Window::setup_callbacks()
@@ -85,5 +106,8 @@ void Window::setup_callbacks()
         WindowData& data = *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
         data.FbWidth = width;
         data.FbHeight = height;
+
+        VulkanContext *vk_context = VulkanContext::get_instance();
+        vk_context->recreate_swapchain();
     });
 }

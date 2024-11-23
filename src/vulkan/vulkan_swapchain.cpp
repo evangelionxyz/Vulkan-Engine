@@ -39,7 +39,7 @@ VulkanSwapchain::VulkanSwapchain(VkDevice device, VkAllocationCallbacks *allocat
     result = vkGetSwapchainImagesKHR(device, m_Swapchain, &swapchain_image_count, nullptr);
     VK_ERROR_CHECK(result, "[Vulkan] Failed to get swapchain count");
     ASSERT(m_MinImageCount <= swapchain_image_count, "[Vulkan] Swapchain image count exceeds maximum number of images");
-    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Requested {0} images, created {1} images", swapchain_image_count, swapchain_image_count);
+    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Requested {} images, created {} images", swapchain_image_count, swapchain_image_count);
 
     create_image_views(device, allocator, swapchain_image_count);
 }
