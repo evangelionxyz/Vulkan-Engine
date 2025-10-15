@@ -24,10 +24,10 @@ static u32 find_memory_type(VkPhysicalDevice physical_device, u32 type_filter, V
     throw std::runtime_error("[Vulkan] Failed to find suitable memory type!");
 }
 
-static void copy_data_to_buffer(VkDevice device, VkDeviceMemory buffer_memory, const void *data, VkDeviceSize size)
+static void copy_data_to_buffer(VkDevice device, VkDeviceMemory buffer_memory, const void *data, VkDeviceSize size, VkDeviceSize offset)
 {
     void *mapped_data;
-    vkMapMemory(device, buffer_memory, 0, size, 0, &mapped_data);
+    vkMapMemory(device, buffer_memory, offset, size, 0, &mapped_data);
     std::memcpy(mapped_data, data, size);
     vkUnmapMemory(device, buffer_memory);
 }
@@ -35,14 +35,20 @@ static void copy_data_to_buffer(VkDevice device, VkDeviceMemory buffer_memory, c
 class VulkanBuffer
 {
 public:
+    VulkanBuffer(VkDeviceSize size, VkBufferUsageFlagBits usage);
     VulkanBuffer(const void *data, VkDeviceSize size, VkBufferUsageFlagBits usage);
     virtual ~VulkanBuffer() {};
+
+    void bind_memory(VkDeviceSize offset = 0);
     
-    void set_data(const void *data, VkDeviceSize size);
+    virtual void set_data(const void *data, VkDeviceSize size, VkDeviceSize offset = 0);
     VkDeviceMemory get_buffer_memory() const { return m_Memory; }
     VkBuffer get_buffer() const { return m_Buffer; }
 
-    void destroy();
+    virtual void destroy();
+private:
+    void allocate_memory();
+
 protected:
     VkDeviceSize m_BufferSize = 0;
     VkBuffer m_Buffer;
@@ -67,6 +73,23 @@ public:
     uint32_t get_count() const { return m_Count; }
 private:
     uint32_t m_Count;
+};
+
+class UniformBuffer : public VulkanBuffer
+{
+public:
+    UniformBuffer(VkDeviceSize size, uint32_t binding_location);
+    ~UniformBuffer() override;
+    
+    static Ref<UniformBuffer> create(VkDeviceSize size, uint32_t binding_location);
+
+    void create_descriptor_set(VkDescriptorSetLayout *layouts);
+    VkDescriptorSet get_descriptor_set() { return m_DescriptorSet; }
+
+    void destroy() override;
+private:
+    VkDescriptorSet m_DescriptorSet;
+    uint32_t m_BindingLocation;
 };
 
 #endif

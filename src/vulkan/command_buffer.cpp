@@ -74,19 +74,27 @@ void CommandBuffer::set_graphics_state(const GraphicsState &state)
         .pClearValues = &state.clear_value,
     };
 
-    vkCmdBeginRenderPass(get_active_handle(), &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(get_active_handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, state.pipeline);
+    VkCommandBuffer active_handle = get_active_handle();
+
+    vkCmdBeginRenderPass(active_handle, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(active_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, state.pipeline);
     m_ActiveGraphicsPipeline = state.pipeline;
 
-    vkCmdSetViewport(get_active_handle(), 0, 1, &state.viewport);
-    vkCmdSetScissor(get_active_handle(), 0, 1, &state.scissor);
+    vkCmdSetViewport(active_handle, 0, 1, &state.viewport);
+    vkCmdSetScissor(active_handle, 0, 1, &state.scissor);
 
     VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(get_active_handle(), 0, 1, state.vertex_buffers.data(), offsets);
+    vkCmdBindVertexBuffers(active_handle, 0, 1, state.vertex_buffers.data(), offsets);
 
     if (state.index_buffer.buffer)
     {
-        vkCmdBindIndexBuffer(get_active_handle(), state.index_buffer.buffer, state.index_buffer.offset, state.index_buffer.index_type);
+        vkCmdBindIndexBuffer(active_handle, state.index_buffer.buffer, state.index_buffer.offset, state.index_buffer.index_type);
+    }
+
+    if (!state.descriptor_sets.empty())
+    {
+        vkCmdBindDescriptorSets(active_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, state.pipeline_layout,
+            0, static_cast<uint32_t>(state.descriptor_sets.size()), state.descriptor_sets.data(), 0, nullptr);
     }
 }
 

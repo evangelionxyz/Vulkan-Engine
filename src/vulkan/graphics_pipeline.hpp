@@ -70,6 +70,7 @@ struct DrawArguments
 struct GraphicsState
 {
     VkPipeline pipeline = VK_NULL_HANDLE;
+    VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
     VkRenderPass render_pass = VK_NULL_HANDLE;
     VkViewport viewport;
@@ -83,6 +84,7 @@ struct GraphicsState
         VkIndexType index_type = VK_INDEX_TYPE_UINT32;
     } index_buffer;
 
+    std::vector<VkDescriptorSet> descriptor_sets;
     std::vector<VkBuffer> vertex_buffers;
 };
 

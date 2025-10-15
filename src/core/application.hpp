@@ -13,7 +13,14 @@ class CommandBuffer;
 class GraphicsPipeline;
 class VertexBuffer;
 class IndexBuffer;
+class UniformBuffer;
 class Shader;
+
+struct UniformBufferData
+{
+    glm::mat4 viewProjection;
+    glm::mat4 transform;
+};
 
 class Application {
 public:
@@ -39,6 +46,7 @@ private:
     Ref<GraphicsPipeline> m_Pipeline;
     Ref<VertexBuffer> m_VertexBuffer;
     Ref<IndexBuffer> m_IndexBuffer;
+    Ref<UniformBuffer> m_UniformBuffer;
 
     std::vector<VkDescriptorSetLayout> m_DescLayouts;
     Ref<CommandBuffer> m_CommandBuffer;
