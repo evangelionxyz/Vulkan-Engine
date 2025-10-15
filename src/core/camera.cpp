@@ -8,7 +8,7 @@ Camera::Camera(float fov, float width, float height, float near_clip, float far_
     : m_Position(0.0f), m_Fov(fov), m_NearClip(near_clip), m_FarClip(far_clip), m_Size({width, height})
 {
     const float aspect = width / height;
-    m_ProjectionMatrix = glm::perspectiveZO(glm::radians(fov), aspect, near_clip, far_clip);
+    update_projection_matrix();
 }
 
 void Camera::update_view_matrix()
@@ -21,6 +21,7 @@ void Camera::update_projection_matrix()
 {
     const float aspect = m_Size.x / m_Size.y;
     m_ProjectionMatrix = glm::perspectiveZO(glm::radians(m_Fov), aspect, m_NearClip, m_FarClip);
+    m_ProjectionMatrix[1][1] *= -1.0f;
 }
 
 Camera &Camera::set_position(const glm::vec3 &position)
