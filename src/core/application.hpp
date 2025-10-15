@@ -30,7 +30,7 @@ public:
     void run();
 
 private:
-    void on_update(float delta_time);
+    void on_update(double delta_time);
 
     void on_window_resize(uint32_t width, uint32_t height);
     void on_framebuffer_resize(uint32_t width, uint32_t height);
@@ -47,6 +47,7 @@ private:
     Ref<VertexBuffer> m_VertexBuffer;
     Ref<IndexBuffer> m_IndexBuffer;
     Ref<UniformBuffer> m_UniformBuffer;
+    UniformBufferData m_UboData;
 
     std::vector<VkDescriptorSetLayout> m_DescLayouts;
     Ref<CommandBuffer> m_CommandBuffer;

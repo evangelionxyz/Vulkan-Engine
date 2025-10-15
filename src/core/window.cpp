@@ -39,6 +39,11 @@ Window::~Window()
     Logger::get_instance().push_message("[Window] Window destroyed");
 }
 
+void Window::set_title(const std::string &title)
+{
+    SDL_SetWindowTitle(m_Window, title.c_str());
+}
+
 bool Window::is_looping() const
 {
     return m_Looping;

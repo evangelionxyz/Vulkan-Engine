@@ -109,7 +109,11 @@ void Application::run()
         }
     });
 
+    Uint64 prevCounter = SDL_GetPerformanceCounter();
+    double freq = static_cast<double>(SDL_GetPerformanceFrequency());
+    float title_update_interval = 0.0f;
     SDL_Event event;
+
     while (m_Window->is_looping())
     {
         while (SDL_PollEvent(&event))
@@ -117,14 +121,36 @@ void Application::run()
             ImGui_ImplSDL3_ProcessEvent(&event);
             m_Window->poll_events(&event);
         }
+
+        Uint64 currCounter = SDL_GetPerformanceCounter();
+        double delta_time = static_cast<double>(currCounter - prevCounter) / freq;
+        prevCounter = currCounter;
+
+        title_update_interval -= static_cast<float>(delta_time);
+        if (title_update_interval <= 0.0f)
+        {
+            double fps = delta_time > 0.0 ? 1.0 / delta_time : 0.0;
+            double ms = delta_time * 1000.0;
+            m_Window->set_title(std::format("Vulkan Engine | {:.1f} FPS | {:.6f}ms", fps, ms));
+            // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "FPS %.1f | %.6f MS", fps, ms);
+            title_update_interval = 2.0f;
+        }
+        
+        on_update(delta_time);
     }
 
     render_thread.join();
 }
 
-void Application::on_update(float delta_time)
+void Application::on_update(double delta_time)
 {
     m_Camera.update_view_matrix();
+
+    static float y_rot = 0.0f;
+    y_rot += delta_time;
+
+    m_UboData.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f)) * glm::rotate(glm::mat4(1.0f), y_rot, glm::vec3(0.0f, 1.0f, 0.0f));
+    m_UboData.viewProjection = m_Camera.get_view_projection_matrix();
 }
 
 void Application::on_window_resize(uint32_t width, uint32_t height)
@@ -336,12 +362,8 @@ void Application::record_frame(VkFramebuffer framebuffer, uint32_t frame_index)
     // const glm::mat4 &view_projection = m_Camera.get_view_projection_matrix();
     // m_CommandBuffer->set_push_constants(VK_SHADER_STAGE_VERTEX_BIT, m_Pipeline->get_layout(), &view_projection, sizeof(glm::mat4));
 
-    UniformBufferData ubo_data = {};
-    ubo_data.viewProjection = m_Camera.get_view_projection_matrix();
-    ubo_data.transform = glm::mat4(1.0f);
-
-    m_UniformBuffer->set_data(&ubo_data, sizeof(ubo_data));
-
+    m_UniformBuffer->set_data(&m_UboData, sizeof(m_UboData));
+    
     GraphicsState state;
     state.pipeline = m_Pipeline->get_handle();
     state.pipeline_layout = m_Pipeline->get_layout();

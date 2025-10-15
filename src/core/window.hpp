@@ -27,6 +27,7 @@ public:
     Window(i32 width, i32 height, const char *title);
     ~Window();
 
+    void set_title(const std::string &title);
     [[nodiscard]] bool is_looping() const;
     void poll_events(SDL_Event *event);
 
