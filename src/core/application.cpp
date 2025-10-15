@@ -39,8 +39,7 @@ Application::Application(i32 argc, char **argv)
     glm::vec2 size = { static_cast<float>(m_Window->get_window_width()), static_cast<float>(m_Window->get_window_height())};
 
     m_Camera = Camera(45.0f, size.x, size.y);
-    m_Camera.set_position(glm::vec3(0.0f, 0.0f, 5.0f))
-        .update_view_matrix();
+    m_Camera.set_position(glm::vec3(0.0f, 0.0f, 5.0f)).update_view_matrix();
 
     create_graphics_pipeline();
 }
@@ -179,7 +178,9 @@ void Application::create_graphics_pipeline()
                     }
                 }
                 if (!merged)
+                {
                     dst_vec.push_back(b);
+                }
             }
         }
     };
@@ -279,7 +280,7 @@ void Application::record_frame(uint32_t frame_index)
     VkCommandBuffer command_buffer = m_CommandBuffer->get_active_handle();
 
     const glm::mat4 &view_projection = m_Camera.get_view_projection_matrix();
-    vkCmdPushConstants(command_buffer, m_Pipeline->get_layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &view_projection);
+    m_CommandBuffer->set_push_constants(VK_SHADER_STAGE_VERTEX_BIT, m_Pipeline->get_layout(), &view_projection, sizeof(glm::mat4));
 
     GraphicsState state;
     state.pipeline = m_Pipeline->get_handle();

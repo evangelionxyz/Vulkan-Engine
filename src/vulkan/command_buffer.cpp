@@ -5,7 +5,7 @@
 #include "vulkan_wrapper.hpp"
 
 CommandBuffer::CommandBuffer(uint32_t count)
-    : m_UseGraphicsState(false)
+    : m_ActiveGraphicsPipeline(VK_NULL_HANDLE)
 {
     const auto device = VulkanContext::get()->get_device();
     const auto command_pool = VulkanContext::get()->get_command_pool();
@@ -40,12 +40,12 @@ void CommandBuffer::begin(VkCommandBufferUsageFlagBits flags)
 
     VK_ERROR_CHECK(vkBeginCommandBuffer(handle, &begin_info), "Failed to begin command buffer");
 
-    m_UseGraphicsState = false;
+    m_ActiveGraphicsPipeline = VK_NULL_HANDLE;
 }
 
 void CommandBuffer::end()
 {
-    if (m_UseGraphicsState)
+    if (m_ActiveGraphicsPipeline)
     {
         vkCmdEndRenderPass(get_active_handle());
     }
@@ -76,15 +76,13 @@ void CommandBuffer::set_graphics_state(const GraphicsState &state)
 
     vkCmdBeginRenderPass(get_active_handle(), &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(get_active_handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, state.pipeline);
+    m_ActiveGraphicsPipeline = state.pipeline;
 
     vkCmdSetViewport(get_active_handle(), 0, 1, &state.viewport);
     vkCmdSetScissor(get_active_handle(), 0, 1, &state.scissor);
 
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(get_active_handle(), 0, 1, state.vertex_buffers.data(), offsets);
-
-    m_UseGraphicsState = true;
-
 }
 
 void CommandBuffer::draw(const DrawArguments &args)
@@ -95,6 +93,11 @@ void CommandBuffer::draw(const DrawArguments &args)
 void CommandBuffer::draw_indexed(const DrawArguments &args)
 {
     vkCmdDrawIndexed(get_active_handle(), args.vertex_count, args.instance_count, args.first_vertex, args.vertex_offset, args.first_instance);
+}
+
+void CommandBuffer::set_push_constants(VkShaderStageFlagBits shader_stage, VkPipelineLayout layout, const void *data, uint32_t size, uint32_t offset)
+{
+    vkCmdPushConstants(get_active_handle(), layout, shader_stage, 0, size, data);
 }
 
 Ref<CommandBuffer> CommandBuffer::create(uint32_t count)
