@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Evangelion Manuhutu
+// Copyright (c) 2025 Evangelion Manuhutu
 
 #include "vulkan_physical_device.hpp"
 #include "vulkan_wrapper.hpp"
@@ -77,7 +77,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, VkSurfaceKHR sur
 
         // get memory properties and features
         vkGetPhysicalDeviceMemoryProperties(physical_device, &current_device.memory_properties);
-        vkGetPhysicalDeviceFeatures(current_device.device, &current_device.fetures);
+        vkGetPhysicalDeviceFeatures(current_device.device, &current_device.features);
     }
 }
 

@@ -30,8 +30,8 @@ class Logger {
 public:
     Logger()
     {
-        std::ios::sync_with_stdio(false);
-        std::cin.tie(nullptr);
+        // std::ios::sync_with_stdio(false);
+        // std::cin.tie(nullptr);
     }
 
     void push_message(std::string message, LoggingLevel level = LoggingLevel::Info)
@@ -129,7 +129,7 @@ private:
             if (*format == '{' && *(format + 1) == '}')
             {
                 ss << value;
-                format_string_impl(ss, format + 1, std::forward<Args>(args)...);
+                format_string_impl(ss, format + 2, std::forward<Args>(args)...);
                 return;
             }
 

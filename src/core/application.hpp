@@ -27,7 +27,7 @@ private:
     void imgui_shutdown() const;
 
     Scope<Window> m_Window;
-    glm::vec4 m_ClearColor = glm::vec4(0.0f);
+    glm::vec4 m_ClearColor = glm::vec4(1.0f);
 };
 
 #endif //APPLICATION_H

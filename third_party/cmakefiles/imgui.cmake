@@ -7,12 +7,14 @@ add_library(IMGUI
 
     ${TP_DIR}/imgui/backends/imgui_impl_vulkan.cpp
     ${TP_DIR}/imgui/backends/imgui_impl_vulkan.h
-    ${TP_DIR}/imgui/backends/imgui_impl_glfw.cpp
-    ${TP_DIR}/imgui/backends/imgui_impl_glfw.h
+    ${TP_DIR}/imgui/backends/imgui_impl_sdl3.cpp
+    ${TP_DIR}/imgui/backends/imgui_impl_sdl3.h
 )
+
+target_compile_definitions(IMGUI PRIVATE SDL_ENABLE_OLD_NAMES)
 
 target_include_directories(IMGUI PRIVATE
     ${TP_DIR}/imgui
-    ${TP_DIR}/glfw/include
+    ${TP_DIR}/sdl3/include
     ${VULKAN_INCLUDE_DIR}
 )

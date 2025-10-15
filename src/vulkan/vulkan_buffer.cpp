@@ -1,4 +1,4 @@
-// Copyright 2024, Evangelion Manuhutu
+// Copyright (c) 2025 Evangelion Manuhutu
 
 #include "vulkan_buffer.hpp"
 #include "vulkan_wrapper.hpp"
@@ -24,8 +24,7 @@ VulkanVertexBuffer::VulkanVertexBuffer(VkDevice device, VkPhysicalDevice physica
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.allocationSize = mem_requirements.size;
     alloc_info.memoryTypeIndex = find_memory_type(
-        m_PhysicalDevice,
-        mem_requirements.memoryTypeBits,
+        m_PhysicalDevice, mem_requirements.memoryTypeBits,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
 

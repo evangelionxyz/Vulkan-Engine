@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Evangelion Manuhutu
+// Copyright (c) 2025 Evangelion Manuhutu
 
 #ifndef VULKAN_WRAPPER_HPP
 #define VULKAN_WRAPPER_HPP
@@ -32,28 +32,88 @@ static VkBool32 vk_debug_messenger_callback(
     const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
     void*                                            pUserData)
 {
-
-    Logger::get_instance().push_message("[Vulkan Message]:");
-
+    // Determine severity level
+    LoggingLevel log_level = LoggingLevel::Info;
+    const char* severity_str = "INFO";
+    
     if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-        Logger::get_instance().push_message(LoggingLevel::Error, "Vulkan {}", pCallbackData->pMessage);
+        log_level = LoggingLevel::Error;
+        severity_str = "ERROR";
     }
     else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-        Logger::get_instance().push_message(LoggingLevel::Warning, "Vulkan {}", pCallbackData->pMessage);
+        log_level = LoggingLevel::Warning;
+        severity_str = "WARNING";
+    }
+    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+        log_level = LoggingLevel::Info;
+        severity_str = "INFO";
+    }
+    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+        log_level = LoggingLevel::Info;
+        severity_str = "VERBOSE";
     }
 
-    if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
-        Logger::get_instance().push_message(LoggingLevel::Info, "\tGeneral: {}", pCallbackData->pMessageIdName);
-    }
+    // Determine message type
+    const char* type_str = "GENERAL";
     if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
-        Logger::get_instance().push_message(LoggingLevel::Info, "\tValidation: {}", pCallbackData->pMessageIdName);
+        type_str = "VALIDATION";
     }
-    if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
-        Logger::get_instance().push_message(LoggingLevel::Info, "\tPerformance: {}", pCallbackData->pMessageIdName);
+    else if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
+        type_str = "PERFORMANCE";
+    }
+
+    // Log the main message with clear formatting
+    Logger::get_instance().push_message(log_level, 
+        "[Vulkan {}] [{}] {}", 
+        severity_str, 
+        type_str, 
+        pCallbackData->pMessage);
+
+    // Log additional details if available
+    if (pCallbackData->pMessageIdName != nullptr) {
+        Logger::get_instance().push_message(log_level, 
+            "  └─ Message ID: {} ({})", 
+            pCallbackData->pMessageIdName, 
+            pCallbackData->messageIdNumber);
+    }
+
+    // Log object information if available
+    if (pCallbackData->objectCount > 0) {
+        Logger::get_instance().push_message(log_level, "  └─ Related Objects:");
+        for (uint32_t i = 0; i < pCallbackData->objectCount; ++i) {
+            const auto& obj = pCallbackData->pObjects[i];
+            const char* obj_name = obj.pObjectName ? obj.pObjectName : "unnamed";
+            Logger::get_instance().push_message(log_level, 
+                "     • Object[{}]: Type={}, Handle={:#x}, Name={}", 
+                i, 
+                static_cast<uint32_t>(obj.objectType),
+                obj.objectHandle,
+                obj_name);
+        }
+    }
+
+    // Log queue label information if available
+    if (pCallbackData->queueLabelCount > 0) {
+        Logger::get_instance().push_message(log_level, "  └─ Queue Labels:");
+        for (uint32_t i = 0; i < pCallbackData->queueLabelCount; ++i) {
+            Logger::get_instance().push_message(log_level, 
+                "     • {}", 
+                pCallbackData->pQueueLabels[i].pLabelName);
+        }
+    }
+
+    // Log command buffer label information if available
+    if (pCallbackData->cmdBufLabelCount > 0) {
+        Logger::get_instance().push_message(log_level, "  └─ Command Buffer Labels:");
+        for (uint32_t i = 0; i < pCallbackData->cmdBufLabelCount; ++i) {
+            Logger::get_instance().push_message(log_level, 
+                "     • {}", 
+                pCallbackData->pCmdBufLabels[i].pLabelName);
+        }
     }
 
     // Return VK_FALSE to indicate that the application should not be terminated
-    // If VK_TRUE is returned, the application will be terminated after the callback returns
+    // Returning VK_TRUE would cause the Vulkan call to be aborted with VK_ERROR_VALIDATION_FAILED_EXT
     return VK_FALSE;
 }
 

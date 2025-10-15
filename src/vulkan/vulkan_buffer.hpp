@@ -1,23 +1,23 @@
-// Copyright 2024, Evangelion Manuhutu
+// Copyright (c) 2025 Evangelion Manuhutu
 
 #ifndef VULKAN_BUFFER_HPP
 #define VULKAN_BUFFER_HPP
 
+#include <cstring>
 #include <vulkan/vulkan.h>
 #include "renderer/vertex.hpp"
 
 #include "vulkan_wrapper.hpp"
 
-static u32 find_memory_type(VkPhysicalDevice physical_device, u32 type_filter, 
-    VkMemoryPropertyFlags properties)
+static u32 find_memory_type(VkPhysicalDevice physical_device, u32 type_filter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties mem_prop;
     vkGetPhysicalDeviceMemoryProperties(physical_device, &mem_prop);
 
-    for (u32 i = 0; i < mem_prop.memoryHeapCount; ++i)
+    // Iterate over available memory types, not heaps
+    for (u32 i = 0; i < mem_prop.memoryTypeCount; ++i)
     {
-        if ((type_filter & (1 << i)) &&
-            (mem_prop.memoryTypes[i].propertyFlags & properties) == properties) {
+        if ((type_filter & (1u << i)) && (mem_prop.memoryTypes[i].propertyFlags & properties) == properties) {
                 return i;
         }
     }
@@ -29,7 +29,7 @@ static void copy_data_to_buffer(VkDevice device, VkDeviceMemory buffer_memory,
 {
     void *mapped_data;
     vkMapMemory(device, buffer_memory, 0, size, 0, &mapped_data);
-    memcpy(mapped_data, data, (size_t)size);
+    std::memcpy(mapped_data, data, size);
     vkUnmapMemory(device, buffer_memory);
 }
 
@@ -42,7 +42,7 @@ public:
     ~VulkanVertexBuffer();
     
     VkDeviceMemory get_buffer_memory() const { return m_VertexBufferMemory; }
-    VkBuffer get_buffer() { return m_VertexBuffer; }
+    VkBuffer get_buffer() const { return m_VertexBuffer; }
 
     void destroy();
 

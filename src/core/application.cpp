@@ -3,8 +3,10 @@
 #include "application.hpp"
 
 #include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 #include "logger.hpp"
 #include "vulkan/vulkan_context.hpp"
@@ -35,11 +37,6 @@ void Application::run()
             ImGui::ColorEdit4("clear color", &m_ClearColor[0]);
             ImGui::End();
             imgui_end();
-
-            m_Window->submit([&](VkCommandBuffer command_buffer)
-            {
-                ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer);
-            });
         }
 
         m_Window->present(m_ClearColor);
@@ -60,31 +57,44 @@ void Application::imgui_init()
     io.ConfigViewportsNoDecoration = false;
 
     // setup renderer backends
-    constexpr bool install_callbacks = true;
-    ImGui_ImplGlfw_InitForVulkan(m_Window->get_native_window(), install_callbacks);
+    ImGui_ImplSDL3_InitForVulkan(m_Window->get_native_window());
+
+    // Ensure Platform_CreateVkSurface is set (needed for multi-viewports with Vulkan)
+    // We use SDL3 to create VkSurface for secondary viewports.
+    auto create_vk_surface = [](ImGuiViewport* viewport, ImU64 vk_instance, const void* vk_allocator, ImU64* out_vk_surface) -> int
+    {
+        SDL_WindowID win_id = (SDL_WindowID)(intptr_t)viewport->PlatformHandle;
+        SDL_Window* sdl_window = SDL_GetWindowFromID(win_id);
+        if (!sdl_window)
+            return 1; // error
+        bool ret = SDL_Vulkan_CreateSurface(sdl_window, (VkInstance)vk_instance, (const VkAllocationCallbacks*)vk_allocator, (VkSurfaceKHR*)out_vk_surface);
+        return ret ? 0 : 1; // 0 on success as expected by imgui_impl_vulkan
+    };
+    ImGui::GetPlatformIO().Platform_CreateVkSurface = create_vk_surface;
 
     ImGui_ImplVulkan_InitInfo init_info = {};
-    init_info.Instance = m_Window->get_vk_context()->get_vk_instance();
-    init_info.PhysicalDevice = m_Window->get_vk_context()->get_vk_physical_device();
-    init_info.Device = m_Window->get_vk_context()->get_vk_logical_device();
-    init_info.QueueFamily = m_Window->get_vk_context()->get_vk_queue_family();
-    init_info.Queue = m_Window->get_vk_context()->get_queue()->get_vk_queue();
-    init_info.PipelineCache = m_Window->get_vk_context()->get_vk_pipeline_cache();
-    init_info.DescriptorPool = m_Window->get_vk_context()->get_vk_descriptor_pool();
-    init_info.RenderPass = m_Window->get_vk_context()->get_vk_render_pass();
+    init_info.Instance = m_Window->get_vk_context()->get_instance();
+    init_info.PhysicalDevice = m_Window->get_vk_context()->get_physical_device();
+    init_info.Device = m_Window->get_vk_context()->get_device();
+    init_info.QueueFamily = m_Window->get_vk_context()->get_queue_family();
+    init_info.Queue = m_Window->get_vk_context()->get_queue()->get_handle();
+    init_info.PipelineCache = VK_NULL_HANDLE;
+    init_info.DescriptorPool = m_Window->get_vk_context()->get_descriptor_pool();
+    init_info.RenderPass = m_Window->get_vk_context()->get_render_pass();
     init_info.Subpass = 0;
-    init_info.MinImageCount = m_Window->get_vk_context()->get_swapchain()->get_vk_min_image_count();
-    init_info.ImageCount = m_Window->get_vk_context()->get_swapchain()->get_vk_image_count();
+    init_info.MinImageCount = m_Window->get_vk_context()->get_swap_chain()->get_min_image_count();
+    init_info.ImageCount = m_Window->get_vk_context()->get_swap_chain()->get_image_count();
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-    init_info.Allocator = m_Window->get_vk_context()->get_vk_allocator();
+    init_info.Allocator = VK_NULL_HANDLE;
     init_info.CheckVkResultFn = VK_NULL_HANDLE;
     ImGui_ImplVulkan_Init(&init_info);
+
 }
 
 void Application::imgui_begin()
 {
     ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
     static ImGuiDockNodeFlags doc_space_flags = ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_PassthruCentralNode;
@@ -139,7 +149,7 @@ void Application::imgui_end()
 void Application::imgui_shutdown() const
 {
     ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
 }
 

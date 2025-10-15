@@ -1,15 +1,14 @@
 // Copyright 2024, Evangelion Manuhutu
 
 #include "window.hpp"
+
 #include "assert.hpp"
 
 #include "vulkan/vulkan_context.hpp"
 
-#include <GLFW/glfw3.h>
+#include <SDL3/SDL.h>
 
 #ifdef _WIN32
-    #define GLFW_EXPOSE_NATIVE_WIN32
-    #include <GLFW/glfw3native.h>
     #include <Windows.h>
     #include <dwmapi.h>
     #pragma comment(lib, "Dwmapi.lib")
@@ -17,37 +16,18 @@
 
 Window::Window(const i32 width, const i32 height, const char* title)
 {
-    i32 success = glfwInit(); 
-    if (!success)
+    Logger::get_instance().push_message("[Window] Creating window");
+
+    if (!SDL_Init(SDL_INIT_VIDEO))
     {
         ASSERT(false, "[Window] Could not initialize GLFW");
-        exit(EXIT_FAILURE);
     }
-    
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
 
-    // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    m_Window = SDL_CreateWindow(title, width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 
-    m_Window = glfwCreateWindow(width, height, title, nullptr, nullptr);
-
-#ifdef _WIN32
-    HWND hwnd = glfwGetWin32Window(m_Window);
-    BOOL useDarkMode = TRUE;
-    DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDarkMode, sizeof(useDarkMode));
-
-    // 7160E8 visual studio purple
-    COLORREF rgbRed = 0x00E86071;
-    DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, &rgbRed, sizeof(rgbRed));
-#endif
 
     m_Data.WindowWidth = width;
     m_Data.WindowHeight = height;
-
-    glfwGetFramebufferSize(m_Window, &m_Data.FbWidth, &m_Data.FbHeight);
-
-    glfwSetWindowUserPointer(m_Window, &m_Data);
-    setup_callbacks();
 
     Logger::get_instance().push_message("[Window] Window created");
 
@@ -56,19 +36,41 @@ Window::Window(const i32 width, const i32 height, const char* title)
 
 Window::~Window()
 {
-    glfwDestroyWindow(m_Window);
-    glfwTerminate();
+    m_Vk->destroy();
+
+    SDL_DestroyWindow(m_Window);
+    SDL_Quit();
     Logger::get_instance().push_message("[Window] Window destroyed");
 }
 
 bool Window::is_looping() const
 {
-    return glfwWindowShouldClose(m_Window) == false;
+    return m_Looping;
 }
 
 void Window::poll_events()
 {
-    glfwPollEvents();
+    SDL_Event event;
+    while (SDL_PollEvent(&event))
+    {
+        switch (event.type)
+        {
+            case SDL_EVENT_WINDOW_RESIZED:
+                {
+                    m_Data.WindowWidth = event.window.data1;
+                    m_Data.WindowHeight = event.window.data2;
+
+                        VulkanContext *vk_context = VulkanContext::get();
+                        vk_context->recreate_swap_chain();
+                    break;
+                }
+            case SDL_EVENT_QUIT:
+                {
+                    m_Looping = false;
+                    break;
+                }
+        }
+    }
 }
 
 void Window::present(const glm::vec4 &clear_color)
@@ -85,29 +87,4 @@ void Window::submit(std::function<void(VkCommandBuffer command_buffer)> func)
 std::queue<std::function<void(VkCommandBuffer command_buffer)>> &Window::get_command_queue()
 {
     return m_CommandFuncs;
-}
-
-void Window::setup_callbacks()
-{
-    glfwSetErrorCallback([](i32 error_code, const char* description)
-    {
-        ASSERT(false, "GLFW Error: '{}' :{}", description, error_code);
-    });
-
-    glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, i32 width, i32 height)
-    {
-        WindowData& data = *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
-        data.WindowWidth = width;
-        data.WindowHeight = height;
-    });
-
-    glfwSetFramebufferSizeCallback(m_Window, [](GLFWwindow* window, i32 width, i32 height)
-    {
-        WindowData& data = *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
-        data.FbWidth = width;
-        data.FbHeight = height;
-
-        VulkanContext *vk_context = VulkanContext::get_instance();
-        vk_context->recreate_swapchain();
-    });
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Evangelion Manuhutu
+// Copyright (c) 2025 Evangelion Manuhutu
 
 #ifndef VULKAN_PHYSICAL_DEVICE_HPP
 #define VULKAN_PHYSICAL_DEVICE_HPP
@@ -17,7 +17,7 @@ struct PhysicalDevice
     std::vector<VkPresentModeKHR> present_modes;
     VkSurfaceCapabilitiesKHR surface_capabilities;
     VkPhysicalDeviceMemoryProperties memory_properties;
-    VkPhysicalDeviceFeatures fetures;
+    VkPhysicalDeviceFeatures features;
 };
 
 using VkSurfaceFormats = std::vector<VkSurfaceFormatKHR>;

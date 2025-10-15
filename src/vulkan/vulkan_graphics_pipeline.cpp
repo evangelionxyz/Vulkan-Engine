@@ -1,34 +1,112 @@
-// Copyright 2024, Evangelion Manuhutu
+// Copyright (c) 2025 Evangelion Manuhutu
 
 #include "vulkan_graphics_pipeline.hpp"
 #include "vulkan_wrapper.hpp"
 
 #include <algorithm>
 
-VulkanGraphicsPipeline::VulkanGraphicsPipeline(VkDevice device, VkAllocationCallbacks *allocator)
-    : m_Device(device), m_Allocator(allocator), m_Pipeline(VK_NULL_HANDLE), m_PipelineLayout(VK_NULL_HANDLE)
+#include "vulkan_context.hpp"
+
+VulkanGraphicsPipeline::VulkanGraphicsPipeline(VkRenderPass render_pass)
+    : m_RenderPass(render_pass), m_Handle(VK_NULL_HANDLE), m_Layout(VK_NULL_HANDLE)
 {
 }
 
-void VulkanGraphicsPipeline::create(const PipelineCreateInfo &create_info)
+void VulkanGraphicsPipeline::begin(const VkCommandBuffer command_buffer, const VkFramebuffer framebuffer, const VkClearValue &clear_color, const VkExtent2D &extent) const
 {
-    // create pipeline layout
-    VkResult result = vkCreatePipelineLayout(m_Device, &create_info.layout_info, nullptr, &m_PipelineLayout);
-    VK_ERROR_CHECK(result, "[Vulkan] Failed to create pipeline layout");
+    const VkRect2D render_area = {
+        .offset = { 0, 0 },
+        .extent = extent
+    };
 
-    m_RenderPass = create_info.render_pass;
+    VkRenderPassBeginInfo render_pass_begin_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .pNext = VK_NULL_HANDLE,
+        .renderPass = m_RenderPass,
+        .framebuffer = framebuffer,
+        .renderArea = render_area,
+        .clearValueCount = 1,
+        .pClearValues = &clear_color,
+    };
 
-    m_Viewport = create_info.viewport;
-    m_Scissor = create_info.scissor;
-    m_Shader = create_info.shader;
+    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE); // render pass
+}
 
-    // Viewport state
-    VkPipelineViewportStateCreateInfo viewport_create_info = {};
-    viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewport_create_info.viewportCount = 1;
-    viewport_create_info.pViewports = &m_Viewport;
-    viewport_create_info.scissorCount = 1;
-    viewport_create_info.pScissors = &m_Scissor;
+void VulkanGraphicsPipeline::end(const VkCommandBuffer command_buffer)
+{
+    vkCmdEndRenderPass(command_buffer);
+}
+
+void VulkanGraphicsPipeline::destroy()
+{
+    auto device = VulkanContext::get()->get_device();
+    
+    if (m_Handle != VK_NULL_HANDLE)
+    {
+        vkDestroyPipeline(device, m_Handle, VK_NULL_HANDLE);
+        m_Handle = VK_NULL_HANDLE;
+    }
+
+    if (m_Layout != VK_NULL_HANDLE)
+    {
+        vkDestroyPipelineLayout(device, m_Layout, VK_NULL_HANDLE);
+        m_Layout = VK_NULL_HANDLE;
+    }
+
+    m_Shaders.clear();
+}
+
+VulkanGraphicsPipeline& VulkanGraphicsPipeline::add_shader(const Ref<VulkanShader>& shader)
+{
+    m_Shaders.push_back(shader);
+    return *this;
+}
+
+void VulkanGraphicsPipeline::build(const VulkanGraphicsPipelineInfo& info)
+{
+    auto device = VulkanContext::get()->get_device();
+
+    // Store the pipeline layout
+    m_Layout = info.layout;
+
+    VkPipelineRasterizationStateCreateInfo rasterization_info = {};
+    rasterization_info.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization_info.depthClampEnable        = VK_FALSE;
+    rasterization_info.rasterizerDiscardEnable = VK_FALSE;
+    rasterization_info.polygonMode             = info.polygon_mode;
+    rasterization_info.lineWidth               = 1.0f;
+    rasterization_info.cullMode                = info.cull_mode;
+    rasterization_info.frontFace               = info.front_face;
+    rasterization_info.depthBiasEnable         = VK_FALSE;
+
+    VkPipelineMultisampleStateCreateInfo multisample_info = {};
+    multisample_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisample_info.sampleShadingEnable  = VK_FALSE;
+    multisample_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkPipelineColorBlendAttachmentState color_blend_attachment = {};
+    color_blend_attachment.colorWriteMask = info.color_write_mask;
+    color_blend_attachment.blendEnable    = info.blending;
+
+    VkPipelineColorBlendStateCreateInfo color_blend_info = {};
+    color_blend_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    color_blend_info.logicOpEnable = VK_FALSE;
+    color_blend_info.logicOp = VK_LOGIC_OP_COPY;
+    color_blend_info.attachmentCount = 1;
+    color_blend_info.pAttachments = &color_blend_attachment;
+    color_blend_info.blendConstants[0] = 0.0f;
+    color_blend_info.blendConstants[1] = 0.0f;
+    color_blend_info.blendConstants[2] = 0.0f;
+    color_blend_info.blendConstants[3] = 0.0f;
+
+    // Viewport state with dynamic viewport and scissor (no static values needed)
+    VkPipelineViewportStateCreateInfo viewport_create_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .pViewports = nullptr,  // Will be set dynamically
+        .scissorCount = 1,
+        .pScissors = nullptr    // Will be set dynamically
+    };
 
     // Dynamic states
     VkDynamicState dynamic_states[] =
@@ -37,73 +115,56 @@ void VulkanGraphicsPipeline::create(const PipelineCreateInfo &create_info)
         VK_DYNAMIC_STATE_SCISSOR
     };
 
-    VkPipelineDynamicStateCreateInfo dynamic_state_create_info = {};
-    dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_state_create_info.dynamicStateCount = sizeof(dynamic_states) / sizeof(dynamic_states[0]);
-    dynamic_state_create_info.pDynamicStates = dynamic_states;
+    VkPipelineDynamicStateCreateInfo dynamic_state_create_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = static_cast<uint32_t>(std::size(dynamic_states)),
+        .pDynamicStates = dynamic_states
+    };
+
+    std::vector<VkPipelineShaderStageCreateInfo> shader_stages {};
+    for (auto& shader : m_Shaders)
+    {
+        shader_stages.push_back(shader->get_stage());
+    }
+
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = info.topology,
+        .primitiveRestartEnable = VK_FALSE,
+    };
+
+    // Build vertex input state from stored data
+    VkPipelineVertexInputStateCreateInfo vertex_input_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &info.binding_description,
+        .vertexAttributeDescriptionCount = static_cast<uint32_t>(info.attribute_descriptions.size()),
+        .pVertexAttributeDescriptions = info.attribute_descriptions.data()
+    };
 
     // Graphics pipeline creation info
-    VkGraphicsPipelineCreateInfo pipeline_create_info = {};
-    pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline_create_info.stageCount = static_cast<uint32_t>(create_info.shader->get_vk_stage_create_info().size());
-    pipeline_create_info.pStages = create_info.shader->get_vk_stage_create_info().data();
-    pipeline_create_info.pVertexInputState = &create_info.input_vertex_info;
-    pipeline_create_info.pInputAssemblyState = &create_info.input_assembly_info;
-    pipeline_create_info.pViewportState = &viewport_create_info;
-    pipeline_create_info.pRasterizationState = &create_info.rasterization_info;
-    pipeline_create_info.pMultisampleState = &create_info.multisample_info;
-    pipeline_create_info.pColorBlendState = &create_info.color_blend_info;
-    pipeline_create_info.pDynamicState = &dynamic_state_create_info;
-    pipeline_create_info.layout = m_PipelineLayout;
-    pipeline_create_info.renderPass = m_RenderPass;
-    pipeline_create_info.subpass = 0;
-    pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+    VkGraphicsPipelineCreateInfo pipeline_create_info = {
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .stageCount = static_cast<uint32_t>(shader_stages.size()),
+        .pStages = shader_stages.data(),
+        .pVertexInputState = &vertex_input_state,
+        .pInputAssemblyState = &input_assembly_info,
+        .pViewportState = &viewport_create_info,
+        .pRasterizationState = &rasterization_info,
+        .pMultisampleState = &multisample_info,
+        .pColorBlendState = &color_blend_info,
+        .pDynamicState = &dynamic_state_create_info,
+        .layout = info.layout,
+        .renderPass = m_RenderPass,
+        .subpass = 0,
+        .basePipelineHandle = VK_NULL_HANDLE,
+        .basePipelineIndex = -1
+    };
 
     // Create the new pipeline
-    result = vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipeline_create_info, m_Allocator, &m_Pipeline);
-    VK_ERROR_CHECK(result, "[Vulkan] Failed to recreate graphics pipeline");
-}
+    VkResult result = vkCreateGraphicsPipelines(device,
+        VK_NULL_HANDLE, 1,
+        &pipeline_create_info, VK_NULL_HANDLE, &m_Handle);
 
-void VulkanGraphicsPipeline::begin_render_pass(VkCommandBuffer command_buffer, VkFramebuffer framebuffer, VkClearValue clear_color, u32 width, u32 height)
-{
-    const VkRect2D render_area = { { 0, 0 }, {  width, height} };
-    VkRenderPassBeginInfo render_pass_begin_info = {};
-    render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    render_pass_begin_info.pNext = VK_NULL_HANDLE;
-    render_pass_begin_info.renderPass = m_RenderPass;
-    render_pass_begin_info.renderArea = render_area;
-    render_pass_begin_info.framebuffer = framebuffer;
-    render_pass_begin_info.clearValueCount = 1;
-    render_pass_begin_info.pClearValues = &clear_color;
-    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE); // render pass
-}
-
-void VulkanGraphicsPipeline::end_render_pass(VkCommandBuffer command_buffer)
-{
-    vkCmdEndRenderPass(command_buffer);
-}
-
-void VulkanGraphicsPipeline::resize(u32 width, u32 height)
-{
-    m_Viewport.width = width;
-    m_Viewport.height = height;
-    m_Scissor.extent.width = width;
-    m_Scissor.extent.height = height;
-}
-
-void VulkanGraphicsPipeline::destroy()
-{
-    if (m_Pipeline != VK_NULL_HANDLE)
-    {
-        vkDestroyPipeline(m_Device, m_Pipeline, m_Allocator);
-        VK_NULL_HANDLE;
-    }
-
-    if (m_PipelineLayout != VK_NULL_HANDLE)
-    {
-        vkDestroyPipelineLayout(m_Device, m_PipelineLayout, m_Allocator);
-        m_PipelineLayout = VK_NULL_HANDLE;
-    }
-
-    m_Shader.reset();
+    VK_ERROR_CHECK(result,"[Vulkan] Failed to recreate graphics pipeline");
 }

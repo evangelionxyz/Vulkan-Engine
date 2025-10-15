@@ -1,36 +1,93 @@
-// Copyright (c) 2024, Evangelion Manuhutu
+// Copyright (c) 2025 Evangelion Manuhutu
 
 #ifndef VULKAN_SHADER_HPP
 #define VULKAN_SHADER_HPP
 
 #include "core/types.hpp"
 
-#include <vulkan/vulkan.h>
 #include <filesystem>
 #include <vector>
 #include <string>
 #include <unordered_map>
 
-struct ShaderProgramSources
+#include <spirv_cross/spirv_cross.hpp>
+#include <spirv_cross/spirv_glsl.hpp>
+#include <shaderc/shaderc.hpp>
+
+#include <vulkan/vulkan.h>
+
+static VkFormat map_spirv_type_to_vk_format(const spirv_cross::SPIRType& type)
 {
-    std::string VertexSources;
-    std::string FragmentSources;
-};
+    using spirv_cross::SPIRType;
+    if (type.basetype == SPIRType::Float && type.columns == 1)
+    {
+        switch (type.vecsize)
+        {
+        case 1: return VK_FORMAT_R32_SFLOAT;
+        case 2: return VK_FORMAT_R32G32_SFLOAT;
+        case 3: return VK_FORMAT_R32G32B32_SFLOAT;
+        case 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+        default: break;
+        }
+    }
+    if (type.basetype == SPIRType::Int && type.columns == 1)
+    {
+        switch (type.vecsize)
+        {
+        case 1: return VK_FORMAT_R32_SINT;
+        case 2: return VK_FORMAT_R32G32_SINT;
+        case 3: return VK_FORMAT_R32G32B32_SINT;
+        case 4: return VK_FORMAT_R32G32B32A32_SINT;
+        default: break;
+        }
+    }
+    if (type.basetype == spirv_cross::SPIRType::UInt && type.columns == 1)
+    {
+        switch (type.vecsize)
+        {
+        case 1: return VK_FORMAT_R32_UINT;
+        case 2: return VK_FORMAT_R32G32_UINT;
+        case 3: return VK_FORMAT_R32G32B32_UINT;
+        case 4: return VK_FORMAT_R32G32B32A32_UINT;
+        default: break;
+        }
+    }
+    return VK_FORMAT_UNDEFINED;
+}
+
 
 class VulkanShader {
 public:
-    VulkanShader(const std::filesystem::path& vertex_shader_path, const std::filesystem::path& fragment_shader_path);
+    VulkanShader(const std::filesystem::path& filepath, VkShaderStageFlagBits stage);
     ~VulkanShader();
 
-    [[nodiscard]] std::vector<VkPipelineShaderStageCreateInfo> &get_vk_stage_create_info();
-    [[nodiscard]] static VkShaderModule create_module(const std::vector<u32>& code);
+    const VkPipelineShaderStageCreateInfo &get_stage() { return m_StageCreateInfo; }
+    VkShaderModule get_module() const { return m_Module; }
+
+    // Reflection getters
+    // Vertex input (only meaningful for vertex stage)
+    const std::vector<VkVertexInputAttributeDescription>& get_vertex_attributes() const { return m_VertexAttributes; }
+    u32 get_vertex_stride() const { return m_VertexStride; }
+
+    // Descriptor set layout bindings grouped by set index
+    const std::unordered_map<u32, std::vector<VkDescriptorSetLayoutBinding>>& get_descriptor_set_layout_bindings() const { return m_SetBindings; }
+
+    // Push constant ranges gathered from this shader
+    const std::vector<VkPushConstantRange>& get_push_constant_ranges() const { return m_PushConstantRanges; }
+
 private:
     [[nodiscard]] static std::string read_file(const std::filesystem::path& file_path) ;
     static std::vector<u32> compile_or_get_vulkan_binaries(const std::string &shader_source, const std::string &file_path, VkShaderStageFlagBits stage) ;
-    static void reflect(VkShaderStageFlagBits shader_stage, const std::vector<u32> &code);
+    void reflect(VkShaderStageFlagBits shader_stage, const std::vector<u32> &code);
 
-    std::vector<VkShaderModule> m_Modules;
-    std::vector<VkPipelineShaderStageCreateInfo> m_StageCreateInfo;
+    // Reflection data
+    std::vector<VkVertexInputAttributeDescription> m_VertexAttributes;
+    u32 m_VertexStride = 0;
+    std::unordered_map<u32, std::vector<VkDescriptorSetLayoutBinding>> m_SetBindings;
+    std::vector<VkPushConstantRange> m_PushConstantRanges;
+
+    VkShaderModule m_Module;
+    VkPipelineShaderStageCreateInfo m_StageCreateInfo;
 };
 
 #endif //VULKAN_SHADER_H

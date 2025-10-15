@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Evangelion Manuhutu
+// Copyright (c) 2025 Evangelion Manuhutu
 
 #ifndef VULKAN_SWAPCHAIN_HPP
 #define VULKAN_SWAPCHAIN_HPP
@@ -14,32 +14,29 @@ public:
     using VkImageViews = std::vector<VkImageView>;
 
     VulkanSwapchain () = default;
-    VulkanSwapchain(VkDevice device, VkAllocationCallbacks *allocator, VkSurfaceKHR surface,
-        VkSurfaceFormatKHR surface_format, VkSurfaceCapabilitiesKHR capabilities, VkPresentModeKHR present_mode,
+    VulkanSwapchain(VkSurfaceKHR surface, VkSurfaceFormatKHR surface_format, VkSurfaceCapabilitiesKHR capabilities, VkPresentModeKHR present_mode,
         VkImageUsageFlags image_usage_flags, u32 queue_family_index);
-    void destroy(const VkAllocationCallbacks *allocator);
+    void destroy();
 
-    [[nodiscard]] VkResult acquire_next_image(u32 *image_index, VkSemaphore semaphore);
+    [[nodiscard]] VkResult acquire_next_image(u32 *image_index, VkSemaphore semaphore) const;
 
-    void begin_render_pass(VkCommandBuffer command_bufferm, VkRenderPass render_pass, VkFramebuffer framebuffer, VkClearValue clear_color);
+    void begin_render_pass(VkCommandBuffer command_buffer, VkRenderPass render_pass, VkFramebuffer framebuffer, VkClearValue clear_color);
 
-    VkSwapchainKHR get_vk_swapchain();
-    VkImages get_vk_images() const;
-    VkImage &get_vk_image(u32 index);
-    VkImageViews get_vk_image_views() const;
-    const VkImageView &get_vk_image_view(u32 index) const;
-    VkSurfaceFormatKHR get_vk_format() const;
-    u32 get_vk_image_count() const;
-    u32 get_vk_min_image_count() const;
-    VkExtent2D get_vk_extent() const;
+    VkSwapchainKHR get_handle();
+    VkImages get_images() const;
+    VkImage &get_image(u32 index);
+    VkImageViews get_image_views() const;
+    const VkImageView &get_image_view(u32 index) const;
+    VkSurfaceFormatKHR get_format() const;
+    u32 get_image_count() const;
+    u32 get_min_image_count() const;
+    VkExtent2D get_extent() const;
 
 private:
-    void create_image_views(VkDevice device, VkAllocationCallbacks *allocator, u32 image_count);
+    void create_image_views(u32 image_count);
 
-    VkSwapchainKHR m_Swapchain;
-    VkDevice m_Device;
-    VkExtent2D m_ImageExtent;
-
+    VkSwapchainKHR m_Handle;
+    VkExtent2D m_Extent;
     VkSurfaceFormatKHR m_Format;
     VkImages m_Images;
     VkImageViews m_ImageViews;

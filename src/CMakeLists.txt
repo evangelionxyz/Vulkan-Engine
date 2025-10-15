@@ -9,6 +9,10 @@ add_executable(Vulkan
     vulkan/vulkan_swapchain.cpp
     vulkan/vulkan_buffer.cpp
     vulkan/vulkan_graphics_pipeline.cpp
+    vulkan/vulkan_command_buffer.hpp
+    vulkan/vulkan_command_buffer.cpp
+    vulkan/vulkan_render_target.hpp
+    vulkan/vulkan_render_target.cpp
 )
 
 target_include_directories(Vulkan PRIVATE
@@ -17,13 +21,10 @@ target_include_directories(Vulkan PRIVATE
     ${TP_DIR}
     ${TP_DIR}/glm
     ${TP_DIR}/imgui
-    ${TP_DIR}/glfw/include
 )
 
-add_dependencies(Vulkan GLFW IMGUI)
-target_link_libraries(Vulkan PRIVATE GLFW IMGUI)
-
-target_compile_definitions(Vulkan PRIVATE GLFW_INCLUDE_NONE)
+add_dependencies(Vulkan SDL3::SDL3-shared IMGUI)
+target_link_libraries(Vulkan PRIVATE SDL3::SDL3-shared IMGUI)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(Vulkan PRIVATE VK_DEBUG)

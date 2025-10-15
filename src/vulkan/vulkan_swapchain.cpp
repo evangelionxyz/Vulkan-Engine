@@ -1,16 +1,17 @@
-// Copyright (c) 2024, Evangelion Manuhutu
+// Copyright (c) 2025 Evangelion Manuhutu
 
 #include "vulkan_swapchain.hpp"
+
+#include "vulkan_context.hpp"
 #include "vulkan_wrapper.hpp"
 
-VulkanSwapchain::VulkanSwapchain(VkDevice device, VkAllocationCallbacks *allocator, VkSurfaceKHR surface,
-    VkSurfaceFormatKHR surface_format, VkSurfaceCapabilitiesKHR capabilities,
+VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkSurfaceFormatKHR surface_format, VkSurfaceCapabilitiesKHR capabilities,
     VkPresentModeKHR present_mode, VkImageUsageFlags image_usage_flags, u32 queue_family_index)
-    : m_Device(device), m_Format(surface_format)
+    : m_Format(surface_format)
 {
     m_MinImageCount = vk_choose_images_count(capabilities);
 
-    m_ImageExtent = capabilities.currentExtent;
+    m_Extent = capabilities.currentExtent;
 
     VkSwapchainCreateInfoKHR swapchain_create_info = {};
     swapchain_create_info.sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -18,7 +19,7 @@ VulkanSwapchain::VulkanSwapchain(VkDevice device, VkAllocationCallbacks *allocat
     swapchain_create_info.minImageCount         = m_MinImageCount;
     swapchain_create_info.imageFormat           = surface_format.format;
     swapchain_create_info.imageColorSpace       = surface_format.colorSpace;
-    swapchain_create_info.imageExtent           = m_ImageExtent;
+    swapchain_create_info.imageExtent           = m_Extent;
     swapchain_create_info.imageArrayLayers      = 1;
     swapchain_create_info.imageUsage            = image_usage_flags;
     swapchain_create_info.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
@@ -30,31 +31,35 @@ VulkanSwapchain::VulkanSwapchain(VkDevice device, VkAllocationCallbacks *allocat
     swapchain_create_info.clipped               = VK_TRUE;
     swapchain_create_info.oldSwapchain          = VK_NULL_HANDLE;
 
-    VkResult result = vkCreateSwapchainKHR(device, &swapchain_create_info, allocator, &m_Swapchain);
+    const VkDevice device = VulkanContext::get()->get_device();
+
+    VkResult result = vkCreateSwapchainKHR(device, &swapchain_create_info, VK_NULL_HANDLE, &m_Handle);
     VK_ERROR_CHECK(result, "[Vulkan] Failed to create swapchain");
     Logger::get_instance().push_message("[Vulkan] Swapchain created");
 
     // create swapchain images
     u32 swapchain_image_count = 0;
-    result = vkGetSwapchainImagesKHR(device, m_Swapchain, &swapchain_image_count, nullptr);
+    result = vkGetSwapchainImagesKHR(device, m_Handle, &swapchain_image_count, nullptr);
     VK_ERROR_CHECK(result, "[Vulkan] Failed to get swapchain count");
     ASSERT(m_MinImageCount <= swapchain_image_count, "[Vulkan] Swapchain image count exceeds maximum number of images");
     Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Requested {} images, created {} images", swapchain_image_count, swapchain_image_count);
 
-    create_image_views(device, allocator, swapchain_image_count);
+    create_image_views(swapchain_image_count);
 }
 
-VkResult VulkanSwapchain::acquire_next_image(u32 *image_index, VkSemaphore semaphore)
+VkResult VulkanSwapchain::acquire_next_image(u32 *image_index, VkSemaphore semaphore) const
 {
-    return vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, image_index);
+    const VkDevice device = VulkanContext::get()->get_device();
+    return vkAcquireNextImageKHR(device, m_Handle, UINT64_MAX, semaphore, VK_NULL_HANDLE, image_index);
 }
 
-void VulkanSwapchain::create_image_views(VkDevice device, VkAllocationCallbacks* allocator, u32 image_count)
+void VulkanSwapchain::create_image_views(u32 image_count)
 {
     m_Images.resize(image_count);
     m_ImageViews.resize(image_count);
 
-    const VkResult result = vkGetSwapchainImagesKHR(device, m_Swapchain, &image_count, m_Images.data());
+    const VkDevice device = VulkanContext::get()->get_device();
+    const VkResult result = vkGetSwapchainImagesKHR(device, m_Handle, &image_count, m_Images.data());
     VK_ERROR_CHECK(result, "[Vulkan] Failed to get swapchain images");
 
     for (u32 i = 0; i < image_count; ++i)
@@ -62,66 +67,69 @@ void VulkanSwapchain::create_image_views(VkDevice device, VkAllocationCallbacks*
         constexpr i32 mip_levels = 1;
         constexpr i32 layer_count = 1;
         m_ImageViews[i] = vk_create_image_view(
-            device, m_Images[i], allocator,
+            device, m_Images[i], VK_NULL_HANDLE,
             m_Format.format, VK_IMAGE_ASPECT_COLOR_BIT,
             VK_IMAGE_VIEW_TYPE_2D, layer_count, mip_levels
         );
     }
 }
 
-void VulkanSwapchain::destroy(const VkAllocationCallbacks* allocator)
+void VulkanSwapchain::destroy()
 {
+    const VkDevice device = VulkanContext::get()->get_device();
     // destroy image view
     for (const auto image_view : m_ImageViews)
-        vkDestroyImageView(m_Device, image_view, allocator);
+    {
+        vkDestroyImageView(device, image_view, VK_NULL_HANDLE);
+    }
     Logger::get_instance().push_message("[Vulkan] Image views destroyed");
 
     // destroy swapchain
-    vkDestroySwapchainKHR(m_Device, m_Swapchain, allocator);
+    vkDestroySwapchainKHR(device, m_Handle, VK_NULL_HANDLE);
     Logger::get_instance().push_message("[Vulkan] Swapchain destroyed");
 }
 
-VkExtent2D VulkanSwapchain::get_vk_extent() const
+VkExtent2D VulkanSwapchain::get_extent() const
 {
-    return m_ImageExtent;
+    return m_Extent;
 }
 
-VkSwapchainKHR VulkanSwapchain::get_vk_swapchain()
+VkSwapchainKHR VulkanSwapchain::get_handle()
 {
-    return m_Swapchain;
+    return m_Handle;
 }
 
-VulkanSwapchain::VkImages VulkanSwapchain::get_vk_images() const
+VulkanSwapchain::VkImages VulkanSwapchain::get_images() const
 {
     return m_Images;
 }
 
-VkImage& VulkanSwapchain::get_vk_image(u32 index)
+VkImage& VulkanSwapchain::get_image(u32 index)
 {
     return m_Images[index];
 }
 
-VulkanSwapchain::VkImageViews VulkanSwapchain::get_vk_image_views() const
+VulkanSwapchain::VkImageViews VulkanSwapchain::get_image_views() const
 {
     return m_ImageViews;
 }
 
-const VkImageView& VulkanSwapchain::get_vk_image_view(u32 index) const
+const VkImageView& VulkanSwapchain::get_image_view(u32 index) const
 {
     return m_ImageViews[index];
 }
 
-VkSurfaceFormatKHR VulkanSwapchain::get_vk_format() const
+VkSurfaceFormatKHR VulkanSwapchain::get_format() const
 {
     return m_Format;
 }
 
-u32 VulkanSwapchain::get_vk_image_count() const
+u32 VulkanSwapchain::get_image_count() const
 {
     return static_cast<u32>(m_Images.size());
 }
 
-u32 VulkanSwapchain::get_vk_min_image_count() const
+u32 VulkanSwapchain::get_min_image_count() const
 {
     return m_MinImageCount;
 }

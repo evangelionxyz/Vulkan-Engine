@@ -37,7 +37,11 @@ elseif (UNIX AND NOT APPLE)
     endif()
 endif()
 
-include(third_party/cmakefiles/glfw.cmake)
 include(third_party/cmakefiles/imgui.cmake)
 
+set(BUILD_SHARED_LIBS)
+set(SDL_EXAMPLES OFF)
+set(SDL_TESTS OFF)
+
+add_subdirectory(third_party/sdl3)
 add_subdirectory(src/)

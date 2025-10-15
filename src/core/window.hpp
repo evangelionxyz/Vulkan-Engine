@@ -20,7 +20,7 @@ struct WindowData
     bool Fullscreen = false;
 };
 
-struct GLFWwindow;
+struct SDL_Window;
 class Window {
 public:
     Window(i32 width, i32 height, const char *title);
@@ -38,18 +38,17 @@ public:
     [[nodiscard]] u32 get_window_width() const { return static_cast<u32>(m_Data.WindowWidth); }
     [[nodiscard]] u32 get_window_height() const { return static_cast<u32>(m_Data.WindowHeight); };
 
-    [[nodiscard]] GLFWwindow *get_native_window() const { return m_Window;};
+    [[nodiscard]] SDL_Window *get_native_window() const { return m_Window;};
 
     VulkanContext *get_vk_context() const { return m_Vk.get(); }
 
     std::queue<std::function<void(VkCommandBuffer command_buffer)>> &get_command_queue();
 
 private:
-    void setup_callbacks();
-
     Scope<VulkanContext> m_Vk;
 
-    GLFWwindow *m_Window;
+    SDL_Window *m_Window;
+    bool m_Looping = true;
     WindowData m_Data{};
 
     std::queue<std::function<void(VkCommandBuffer command_buffer)>> m_CommandFuncs;
