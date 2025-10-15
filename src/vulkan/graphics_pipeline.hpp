@@ -69,12 +69,13 @@ struct DrawArguments
 
 struct GraphicsState
 {
-    VkPipeline pipeline;
-    VkFramebuffer framebuffer;
-    VkRenderPass render_pass;
+    VkPipeline pipeline = VK_NULL_HANDLE;
+    VkFramebuffer framebuffer = VK_NULL_HANDLE;
+    VkRenderPass render_pass = VK_NULL_HANDLE;
     VkViewport viewport;
     VkRect2D scissor;
     VkClearValue clear_value;
+    VkBuffer index_buffer = VK_NULL_HANDLE;
     std::vector<VkBuffer> vertex_buffers;
 };
 

@@ -12,6 +12,7 @@ class VulkanContext;
 class CommandBuffer;
 class GraphicsPipeline;
 class VertexBuffer;
+class IndexBuffer;
 class Shader;
 
 class Application {
@@ -37,6 +38,8 @@ private:
 
     Ref<GraphicsPipeline> m_Pipeline;
     Ref<VertexBuffer> m_VertexBuffer;
+    Ref<IndexBuffer> m_IndexBuffer;
+
     std::vector<VkDescriptorSetLayout> m_DescLayouts;
     Ref<CommandBuffer> m_CommandBuffer;
     Camera m_Camera;

@@ -43,7 +43,7 @@ public:
 
     void set_data(void *data, VkDeviceSize size);
 
-    Ref<VertexBuffer> create(void *data, VkDeviceSize size);
+    static Ref<VertexBuffer> create(void *data, VkDeviceSize size);
     
     VkDeviceMemory get_buffer_memory() const { return m_BufferMemory; }
     VkBuffer get_buffer() const { return m_Buffer; }
@@ -54,6 +54,26 @@ private:
     VkDeviceSize m_BufferSize;
     VkBuffer m_Buffer;
     VkDeviceMemory m_BufferMemory;
+};
+
+class IndexBuffer
+{
+public:
+    IndexBuffer(const std::vector<uint32_t> &indices);
+    ~IndexBuffer();
+    
+    static Ref<IndexBuffer> create(const std::vector<uint32_t> &indices);
+
+    VkDeviceMemory get_buffer_memory() const { return m_BufferMemory; }
+    VkBuffer get_buffer() const { return m_Buffer; }
+    uint32_t get_count() const { return m_Count; }
+    void destroy();
+private:
+    VkDeviceSize m_BufferSize;
+    VkBuffer m_Buffer;
+    VkDeviceMemory m_BufferMemory;
+
+    uint32_t m_Count;
 };
 
 #endif

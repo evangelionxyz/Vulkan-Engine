@@ -59,6 +59,11 @@ Application::~Application()
         m_VertexBuffer->destroy();
     }
 
+    if (m_IndexBuffer)
+    {
+        m_IndexBuffer->destroy();
+    }
+
     for (auto layout : m_DescLayouts)
     {
         vkDestroyDescriptorSetLayout(device, layout, VK_NULL_HANDLE);
@@ -131,13 +136,21 @@ void Application::create_graphics_pipeline()
     std::vector<Vertex> vertices =
     {
         // Position, Color (clockwise winding)
-        {{  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{ -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{  0.0f,  0.5f}, {0.0f, 1.0f, 0.0f}}
+        {{ -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
+        {{ -0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{  0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}}
+    };
+
+    std::vector<uint32_t> indices = 
+    {
+        0, 1, 2,
+        0, 2, 3
     };
 
     VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
-    m_VertexBuffer = CreateRef<VertexBuffer>(vertices.data(), buffer_size);
+    m_VertexBuffer = VertexBuffer::create(vertices.data(), buffer_size);
+    m_IndexBuffer = IndexBuffer::create(indices);
 
     // Build vertex input state from reflection if available; fallback to hardcoded Vertex layout
     VkVertexInputBindingDescription binding_desc = {};
@@ -289,14 +302,15 @@ void Application::record_frame(uint32_t frame_index)
     state.scissor = scissor;
     state.viewport = viewport;
     state.clear_value = clear_value;
+    state.index_buffer = m_IndexBuffer->get_buffer();
     state.vertex_buffers = { m_VertexBuffer->get_buffer() };
     
     m_CommandBuffer->set_graphics_state(state);
 
     DrawArguments args;
-    args.vertex_count = 3;
+    args.vertex_count = m_IndexBuffer->get_count();
     args.instance_count = 1;
-    m_CommandBuffer->draw(args);
+    m_CommandBuffer->draw_indexed(args);
 
     if (ImDrawData* draw_data = ImGui::GetDrawData())
     {
