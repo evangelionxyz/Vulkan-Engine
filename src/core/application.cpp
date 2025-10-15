@@ -302,7 +302,7 @@ void Application::record_frame(uint32_t frame_index)
     state.scissor = scissor;
     state.viewport = viewport;
     state.clear_value = clear_value;
-    state.index_buffer = m_IndexBuffer->get_buffer();
+    state.index_buffer = { m_IndexBuffer->get_buffer(), 0, VK_INDEX_TYPE_UINT32 };
     state.vertex_buffers = { m_VertexBuffer->get_buffer() };
     
     m_CommandBuffer->set_graphics_state(state);

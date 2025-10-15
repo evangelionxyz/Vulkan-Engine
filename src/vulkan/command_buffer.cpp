@@ -84,9 +84,9 @@ void CommandBuffer::set_graphics_state(const GraphicsState &state)
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(get_active_handle(), 0, 1, state.vertex_buffers.data(), offsets);
 
-    if (state.index_buffer)
+    if (state.index_buffer.buffer)
     {
-        vkCmdBindIndexBuffer(get_active_handle(), state.index_buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(get_active_handle(), state.index_buffer.buffer, state.index_buffer.offset, state.index_buffer.index_type);
     }
 }
 

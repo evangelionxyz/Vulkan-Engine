@@ -75,7 +75,14 @@ struct GraphicsState
     VkViewport viewport;
     VkRect2D scissor;
     VkClearValue clear_value;
-    VkBuffer index_buffer = VK_NULL_HANDLE;
+
+    struct
+    {
+        VkBuffer buffer = VK_NULL_HANDLE;
+        uint32_t offset = 0;
+        VkIndexType index_type = VK_INDEX_TYPE_UINT32;
+    } index_buffer;
+
     std::vector<VkBuffer> vertex_buffers;
 };
 
