@@ -24,8 +24,7 @@ static u32 find_memory_type(VkPhysicalDevice physical_device, u32 type_filter, V
     throw std::runtime_error("[Vulkan] Failed to find suitable memory type!");
 }
 
-static void copy_data_to_buffer(VkDevice device, VkDeviceMemory buffer_memory, 
-    void *data, VkDeviceSize size)
+static void copy_data_to_buffer(VkDevice device, VkDeviceMemory buffer_memory, const void *data, VkDeviceSize size)
 {
     void *mapped_data;
     vkMapMemory(device, buffer_memory, 0, size, 0, &mapped_data);
@@ -33,46 +32,40 @@ static void copy_data_to_buffer(VkDevice device, VkDeviceMemory buffer_memory,
     vkUnmapMemory(device, buffer_memory);
 }
 
-class VertexBuffer
+class VulkanBuffer
 {
 public:
-    VertexBuffer() = default;
-
-    VertexBuffer(void *data, VkDeviceSize size);
-    ~VertexBuffer();
-
-    void set_data(void *data, VkDeviceSize size);
-
-    static Ref<VertexBuffer> create(void *data, VkDeviceSize size);
+    VulkanBuffer(const void *data, VkDeviceSize size, VkBufferUsageFlagBits usage);
+    virtual ~VulkanBuffer() {};
     
-    VkDeviceMemory get_buffer_memory() const { return m_BufferMemory; }
+    void set_data(const void *data, VkDeviceSize size);
+    VkDeviceMemory get_buffer_memory() const { return m_Memory; }
     VkBuffer get_buffer() const { return m_Buffer; }
 
     void destroy();
-
-private:
-    VkDeviceSize m_BufferSize;
+protected:
+    VkDeviceSize m_BufferSize = 0;
     VkBuffer m_Buffer;
-    VkDeviceMemory m_BufferMemory;
+    VkDeviceMemory m_Memory;
 };
 
-class IndexBuffer
+class VertexBuffer : public VulkanBuffer
+{
+public:
+    VertexBuffer(void *data, VkDeviceSize size);
+    ~VertexBuffer() override;
+    static Ref<VertexBuffer> create(void *data, VkDeviceSize size);
+};
+
+class IndexBuffer : public VulkanBuffer
 {
 public:
     IndexBuffer(const std::vector<uint32_t> &indices);
-    ~IndexBuffer();
+    ~IndexBuffer() override;
     
     static Ref<IndexBuffer> create(const std::vector<uint32_t> &indices);
-
-    VkDeviceMemory get_buffer_memory() const { return m_BufferMemory; }
-    VkBuffer get_buffer() const { return m_Buffer; }
     uint32_t get_count() const { return m_Count; }
-    void destroy();
 private:
-    VkDeviceSize m_BufferSize;
-    VkBuffer m_Buffer;
-    VkDeviceMemory m_BufferMemory;
-
     uint32_t m_Count;
 };
 

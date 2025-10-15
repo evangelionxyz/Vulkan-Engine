@@ -162,6 +162,13 @@ void Application::create_graphics_pipeline()
     VkVertexInputBindingDescription binding_desc = {};
     std::vector<VkVertexInputAttributeDescription> attr_desc;
     const auto& reflected_attrs = vertex_shader->get_vertex_attributes();
+    if (!reflected_attrs.empty())
+    {
+        binding_desc.binding = 0;
+        binding_desc.stride = vertex_shader->get_vertex_stride();
+        binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        attr_desc = reflected_attrs; // copy
+    }
 
     // Merge descriptor set layouts from both shaders
     std::unordered_map<u32, std::vector<VkDescriptorSetLayoutBinding>> merged_sets;

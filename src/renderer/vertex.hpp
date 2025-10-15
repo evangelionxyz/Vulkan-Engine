@@ -14,5 +14,4 @@ struct Vertex
     glm::vec3 color;
 };
 
-
 #endif
