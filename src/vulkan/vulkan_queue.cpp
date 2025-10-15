@@ -15,7 +15,7 @@ VulkanQueue::VulkanQueue(const u32 queue_family_index, const u32 queue_index)
     create_semaphores();
 }
 
-void VulkanQueue::submit_sync(const VkCommandBuffer command_buffer) const
+void VulkanQueue::submit_sync(const std::vector<VkCommandBuffer> &command_buffers) const
 {
     VkSubmitInfo submit_info = {};
     submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -23,16 +23,15 @@ void VulkanQueue::submit_sync(const VkCommandBuffer command_buffer) const
     submit_info.waitSemaphoreCount   = 0;
     submit_info.pWaitSemaphores      = VK_NULL_HANDLE;
     submit_info.pWaitDstStageMask    = VK_NULL_HANDLE;
-    submit_info.commandBufferCount   = 1;
-    submit_info.pCommandBuffers      = &command_buffer;
+    submit_info.commandBufferCount   = static_cast<uint32_t>(command_buffers.size());
+    submit_info.pCommandBuffers      = command_buffers.data();
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores    = VK_NULL_HANDLE;
 
-    VK_ERROR_CHECK(vkQueueSubmit(m_Handle, 1, &submit_info, m_InFlightFence),
-        "[Vulkan] Failed to submit");
+    VK_ERROR_CHECK(vkQueueSubmit(m_Handle, 1, &submit_info, m_InFlightFence), "[Vulkan] Failed to submit");
 }
 
-void VulkanQueue::submit_async(const VkCommandBuffer cmd) const
+void VulkanQueue::submit_async(const std::vector<VkCommandBuffer> &command_buffers) const
 {
     // submit command buffer
     const VkSemaphore wait_semaphores[]      = {m_ImageAvailableSemaphore};
@@ -42,8 +41,8 @@ void VulkanQueue::submit_async(const VkCommandBuffer cmd) const
     VkSubmitInfo submit_info = {};
     submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pWaitDstStageMask    = wait_stages;
-    submit_info.commandBufferCount   = 1u;
-    submit_info.pCommandBuffers      = &cmd;
+    submit_info.commandBufferCount   = static_cast<uint32_t>(command_buffers.size());
+    submit_info.pCommandBuffers      = command_buffers.data();
     submit_info.signalSemaphoreCount = 1u;
     submit_info.pSignalSemaphores    = signaled_semaphores;
     submit_info.waitSemaphoreCount   = 1u;

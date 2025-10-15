@@ -8,18 +8,54 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+#include <algorithm>
+#include <unordered_map>
+
 #include "logger.hpp"
+
+#include "vulkan/buffers.hpp"
+#include "vulkan/command_buffer.hpp"
+#include "vulkan/graphics_pipeline.hpp"
+#include "vulkan/shader.hpp"
+
 #include "vulkan/vulkan_context.hpp"
 #include "vulkan/vulkan_wrapper.hpp"
 
 Application::Application(i32 argc, char **argv)
 {
     m_Window = CreateScope<Window>(1024, 720, "Vulkan Engine");
+    m_Vk = m_Window->get_vk_context();
+
+    m_CommandBuffer = CommandBuffer::create();
+
+    create_graphics_pipeline();
 }
 
 Application::~Application()
 {
-    m_Window->get_vk_context()->get_queue()->wait_idle();
+    const VkDevice device = m_Vk->get_device();
+    m_Vk->get_queue()->wait_idle();
+
+    if (m_Pipeline)
+    {
+        m_Pipeline->destroy();
+    }
+
+    if (m_VertexBuffer)
+    {
+        m_VertexBuffer->destroy();
+    }
+
+    for (auto layout : m_DescLayouts)
+    {
+        vkDestroyDescriptorSetLayout(device, layout, VK_NULL_HANDLE);
+    }
+
+    if (m_CommandBuffer)
+    {
+        m_CommandBuffer->destroy();
+    }
+
     imgui_shutdown();
 }
 
@@ -30,6 +66,8 @@ void Application::run()
     while (m_Window->is_looping())
     {
         m_Window->poll_events();
+        
+        if (auto frame_index = m_Vk->begin_frame())
         {
             imgui_begin();
             ImGui::ShowDemoWindow();
@@ -37,10 +75,191 @@ void Application::run()
             ImGui::ColorEdit4("clear color", &m_ClearColor[0]);
             ImGui::End();
             imgui_end();
-        }
 
-        m_Window->present(m_ClearColor);
+            record_frame(*frame_index);
+
+            m_Vk->present();
+        }
     }
+}
+
+void Application::create_graphics_pipeline()
+{
+    const VkDevice device = m_Vk->get_device();
+
+    const Ref<Shader> vertex_shader = CreateRef<Shader>("res/shaders/default.vert", VK_SHADER_STAGE_VERTEX_BIT);
+    const Ref<Shader> fragment_shader = CreateRef<Shader>("res/shaders/default.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    std::vector<Vertex> vertices =
+    {
+        {{ -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Position, Color
+        {{ 0.0f,  0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{ 0.5f,  -0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
+
+    VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
+    m_VertexBuffer = CreateRef<VertexBuffer>(vertices.data(), buffer_size);
+
+    // Build vertex input state from reflection if available; fallback to hardcoded Vertex layout
+    VkVertexInputBindingDescription binding_desc = {};
+    std::vector<VkVertexInputAttributeDescription> attr_desc;
+    const auto& reflected_attrs = vertex_shader->get_vertex_attributes();
+    if (!reflected_attrs.empty())
+    {
+        binding_desc.binding = 0;
+        binding_desc.stride = vertex_shader->get_vertex_stride();
+        binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        attr_desc = reflected_attrs; // copy
+    }
+    else
+    {
+        binding_desc = Vertex::get_vk_binding_desc();
+        auto arr = Vertex::get_vk_attribute_desc();
+        attr_desc.assign(arr.begin(), arr.end());
+    }
+
+    // Merge descriptor set layouts from both shaders
+    std::unordered_map<u32, std::vector<VkDescriptorSetLayoutBinding>> merged_sets;
+    auto merge_sets = [&merged_sets]
+        (const std::unordered_map<u32, std::vector<VkDescriptorSetLayoutBinding>>& src)
+    {
+        for (const auto& [set, bindings] : src)
+        {
+            auto& dst_vec = merged_sets[set];
+            for (const auto& b : bindings)
+            {
+                bool merged = false;
+                for (auto& existing : dst_vec)
+                {
+                    if (existing.binding == b.binding && existing.descriptorType == b.descriptorType)
+                    {
+                        existing.stageFlags |= b.stageFlags; // merge stage flags
+                        merged = true;
+                        break;
+                    }
+                }
+                if (!merged)
+                    dst_vec.push_back(b);
+            }
+        }
+    };
+    merge_sets(vertex_shader->get_descriptor_set_layout_bindings());
+    merge_sets(fragment_shader->get_descriptor_set_layout_bindings());
+
+    // Create VkDescriptorSetLayout(s)
+    std::vector<std::pair<u32, VkDescriptorSetLayout>> set_layout_pairs;
+    set_layout_pairs.reserve(merged_sets.size());
+    for (auto& [set_index, bindings] : merged_sets)
+    {
+        VkDescriptorSetLayoutCreateInfo set_info { };
+        set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        set_info.bindingCount = static_cast<u32>(bindings.size());
+        set_info.pBindings = bindings.data();
+        VkDescriptorSetLayout set_layout = VK_NULL_HANDLE;
+        VkResult res = vkCreateDescriptorSetLayout(device, &set_info, nullptr, &set_layout);
+        VK_ERROR_CHECK(res, "[Vulkan] Failed to create descriptor set layout");
+        set_layout_pairs.emplace_back(set_index, set_layout);
+        m_DescLayouts.push_back(set_layout); // Store for cleanup
+    }
+    // Sort by set index and create array
+    std::sort(set_layout_pairs.begin(), set_layout_pairs.end(), [](auto& a, auto& b){ return a.first < b.first; });
+    std::vector<VkDescriptorSetLayout> set_layouts;
+    set_layouts.reserve(set_layout_pairs.size());
+    for (auto& p : set_layout_pairs) set_layouts.push_back(p.second);
+
+    // Merge push constant ranges
+    std::vector<VkPushConstantRange> push_ranges = vertex_shader->get_push_constant_ranges();
+    for (const auto& pr : fragment_shader->get_push_constant_ranges())
+    {
+        bool merged = false;
+        for (auto& ex : push_ranges)
+        {
+            if (ex.offset == pr.offset && ex.size == pr.size)
+            {
+                ex.stageFlags |= pr.stageFlags;
+                merged = true;
+                break;
+            }
+        }
+        if (!merged)
+            push_ranges.push_back(pr);
+    }
+
+    VkPipelineLayoutCreateInfo layout_create_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = static_cast<u32>(set_layouts.size()),
+        .pSetLayouts = set_layouts.empty() ? nullptr : set_layouts.data(),
+        .pushConstantRangeCount = static_cast<u32>(push_ranges.size()),
+        .pPushConstantRanges = push_ranges.empty() ? nullptr : push_ranges.data()
+    };
+
+    // create pipeline layout
+    VkPipelineLayout pipeline_layout;
+    VkResult result = vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipeline_layout);
+    VK_ERROR_CHECK(result, "[Vulkan] Failed to create pipeline layout");
+
+    GraphicsPipelineInfo pipeline_info {
+        .binding_description = binding_desc,
+        .attribute_descriptions = attr_desc,  // This copies the vector
+        .layout = pipeline_layout,
+        .extent = VulkanContext::get()->get_swap_chain()->get_extent(),
+        .render_pass = m_Vk->get_render_pass(),
+    };
+
+    m_Pipeline = CreateRef<GraphicsPipeline>();
+    m_Pipeline->add_shader(vertex_shader)
+        .add_shader(fragment_shader)
+        .build(pipeline_info);
+}
+
+void Application::record_frame(uint32_t frame_index)
+{
+    const VkExtent2D extent = m_Vk->get_swap_chain()->get_extent();
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(extent.width);
+    viewport.height = static_cast<float>(extent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = extent;
+
+    VkClearValue clear_value{};
+    clear_value.color.float32[0] = m_ClearColor.r;
+    clear_value.color.float32[1] = m_ClearColor.g;
+    clear_value.color.float32[2] = m_ClearColor.b;
+    clear_value.color.float32[3] = m_ClearColor.a;
+
+    m_CommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    VkCommandBuffer command_buffer = m_CommandBuffer->get_active_handle();
+
+    GraphicsState state;
+    state.pipeline = m_Pipeline->get_handle();
+    state.framebuffer = m_Vk->get_framebuffer(frame_index);
+    state.render_pass = m_Vk->get_render_pass();
+    state.scissor = scissor;
+    state.viewport = viewport;
+    state.clear_value = clear_value;
+    state.vertex_buffers = { m_VertexBuffer->get_buffer() };
+    
+    m_CommandBuffer->set_graphics_state(state);
+
+    DrawArguments args;
+    args.vertex_count = 3;
+    args.instance_count = 1;
+    m_CommandBuffer->draw(args);
+
+    if (ImDrawData* draw_data = ImGui::GetDrawData())
+    {
+        ImGui_ImplVulkan_RenderDrawData(draw_data, command_buffer);
+    }
+
+    m_CommandBuffer->end();
+    m_Vk->submit({command_buffer});
 }
 
 void Application::imgui_init()
@@ -70,25 +289,30 @@ void Application::imgui_init()
         bool ret = SDL_Vulkan_CreateSurface(sdl_window, (VkInstance)vk_instance, (const VkAllocationCallbacks*)vk_allocator, (VkSurfaceKHR*)out_vk_surface);
         return ret ? 0 : 1; // 0 on success as expected by imgui_impl_vulkan
     };
+
     ImGui::GetPlatformIO().Platform_CreateVkSurface = create_vk_surface;
 
     ImGui_ImplVulkan_InitInfo init_info = {};
-    init_info.Instance = m_Window->get_vk_context()->get_instance();
-    init_info.PhysicalDevice = m_Window->get_vk_context()->get_physical_device();
-    init_info.Device = m_Window->get_vk_context()->get_device();
-    init_info.QueueFamily = m_Window->get_vk_context()->get_queue_family();
-    init_info.Queue = m_Window->get_vk_context()->get_queue()->get_handle();
+    init_info.Instance = m_Vk->get_instance();
+    init_info.PhysicalDevice = m_Vk->get_physical_device();
+    init_info.Device = m_Vk->get_device();
+    init_info.QueueFamily = m_Vk->get_queue_family();
+    init_info.Queue = m_Vk->get_queue()->get_handle();
     init_info.PipelineCache = VK_NULL_HANDLE;
-    init_info.DescriptorPool = m_Window->get_vk_context()->get_descriptor_pool();
-    init_info.RenderPass = m_Window->get_vk_context()->get_render_pass();
+    init_info.DescriptorPool = m_Vk->get_descriptor_pool();
+    init_info.RenderPass = m_Vk->get_render_pass();
     init_info.Subpass = 0;
-    init_info.MinImageCount = m_Window->get_vk_context()->get_swap_chain()->get_min_image_count();
-    init_info.ImageCount = m_Window->get_vk_context()->get_swap_chain()->get_image_count();
+    init_info.MinImageCount = m_Vk->get_swap_chain()->get_min_image_count();
+    init_info.ImageCount = m_Vk->get_swap_chain()->get_image_count();
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     init_info.Allocator = VK_NULL_HANDLE;
     init_info.CheckVkResultFn = VK_NULL_HANDLE;
     ImGui_ImplVulkan_Init(&init_info);
 
+    if (!ImGui_ImplVulkan_CreateFontsTexture())
+    {
+        Logger::get_instance().push_message("[ImGui] Failed to create font texture", LoggingLevel::Error);
+    }
 }
 
 void Application::imgui_begin()
@@ -115,7 +339,7 @@ void Application::imgui_begin()
     }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(1, 2));
-    ImGui::Begin("ORigin", nullptr, window_flags);
+    ImGui::Begin("Vulkan", nullptr, window_flags);
 
     ImGuiStyle& style = ImGui::GetStyle();
     const float min_window_size_x = style.WindowMinSize.x;

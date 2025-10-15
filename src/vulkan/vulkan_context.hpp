@@ -4,12 +4,14 @@
 #define VULKAN_CONTEXT_HPP
 
 #include <unordered_map>
+#include <optional>
+#include <vector>
+
+#include <vulkan/vulkan.h>
 
 #include "vulkan_queue.hpp"
 #include "vulkan_swapchain.hpp"
-#include "vulkan_physical_device.hpp"
-#include "vulkan_graphics_pipeline.hpp"
-#include "vulkan_buffer.hpp"
+#include "physical_device.hpp"
 
 #include <glm/glm.hpp>
 
@@ -19,11 +21,8 @@ public:
     explicit VulkanContext(Window *window);
     void destroy();
 
-    void create_graphics_pipeline();
     void create_framebuffers();
-    void create_command_buffers();
-    void free_command_buffers() const;
-    void destroy_framebuffers() const;
+    void destroy_framebuffers();
     void reset_command_pool() const;
 
     void set_clear_color(const glm::vec4 &clear_color);
@@ -41,8 +40,10 @@ public:
     static VulkanContext *get();
 
     void recreate_swap_chain();
+    std::optional<uint32_t> begin_frame();
     void present();
-    void record_command_buffer(VkCommandBuffer command_buffer, u32 image_index);
+
+    VkFramebuffer get_framebuffer(uint32_t image_index) const;
 
     void create_instance();
     void create_debug_callback();
@@ -55,7 +56,11 @@ public:
     void create_descriptor_pool();
     void create_render_pass();
 
+    VkResult reset_command_buffer(VkCommandBuffer command_buffer);
+    void submit(const std::vector<VkCommandBuffer> &command_buffers);
+    uint32_t get_current_image_index();
 private:
+
     Window* m_Window                   = nullptr;
     VkInstance m_Instance              = VK_NULL_HANDLE;
     VkDevice m_Device                  = VK_NULL_HANDLE;
@@ -65,20 +70,14 @@ private:
     VkDescriptorPool m_DescriptorPool  = VK_NULL_HANDLE;
     VkRenderPass m_RenderPass          = VK_NULL_HANDLE;
 
-    Ref<VulkanGraphicsPipeline> m_GraphicsPipeline;
-
     VulkanPhysicalDevice m_PhysicalDevice;
     VulkanSwapchain m_SwapChain;
     VulkanQueue m_Queue;
     uint32_t m_QueueFamily               = 0;
-    VkClearValue m_ClearValue{};
-
-    Ref<VulkanVertexBuffer> m_Buffer;
+    uint32_t m_ImageIndex                = 0;
 
     VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;
-    std::vector<VkFramebuffer> m_MainFrameBuffers;
-    std::vector<VkCommandBuffer> m_MainCmdBuffers;
-    std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
+    std::vector<VkFramebuffer> m_Framebuffers;
 };
 
 #endif //VULKAN_CONTEXT_HPP

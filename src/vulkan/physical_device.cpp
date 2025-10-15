@@ -1,6 +1,6 @@
 // Copyright (c) 2025 Evangelion Manuhutu
 
-#include "vulkan_physical_device.hpp"
+#include "physical_device.hpp"
 #include "vulkan_wrapper.hpp"
 #include "core/assert.hpp"
 

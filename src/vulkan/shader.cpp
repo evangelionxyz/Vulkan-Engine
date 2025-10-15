@@ -3,8 +3,10 @@
 #include "core/assert.hpp"
 #include "core/logger.hpp"
 
-#include "vulkan_shader.hpp"
+#include "shader.hpp"
 #include "vulkan_context.hpp"
+
+#include "vulkan_wrapper.hpp"
 
 #include <fstream>
 
@@ -60,7 +62,7 @@ static std::string vulkan_shader_stage_extension(const VkShaderStageFlagBits sta
     }
 }
 
-VulkanShader::VulkanShader(const std::filesystem::path& filepath, VkShaderStageFlagBits stage)
+Shader::Shader(const std::filesystem::path& filepath, VkShaderStageFlagBits stage)
 {
     if (!std::filesystem::exists(filepath))
     {
@@ -92,13 +94,15 @@ VulkanShader::VulkanShader(const std::filesystem::path& filepath, VkShaderStageF
     m_StageCreateInfo.pNext = VK_NULL_HANDLE;
 }
 
-VulkanShader::~VulkanShader()
+Shader::~Shader()
 {
-    const VkDevice device = VulkanContext::get()->get_device();;
+    const VkDevice device = VulkanContext::get()->get_device();
     vkDestroyShaderModule(device, m_Module, VK_NULL_HANDLE);
+
+    m_Module = VK_NULL_HANDLE;
 }
 
-std::string VulkanShader::read_file(const std::filesystem::path& file_path)
+std::string Shader::read_file(const std::filesystem::path& file_path)
 {
     std::string result;
     std::ifstream shader_in(file_path.string(), std::ios::binary);
@@ -125,7 +129,7 @@ std::string VulkanShader::read_file(const std::filesystem::path& file_path)
     return result;
 }
 
-std::vector<u32> VulkanShader::compile_or_get_vulkan_binaries(const std::string& shader_source, const std::string& file_path, VkShaderStageFlagBits stage)
+std::vector<u32> Shader::compile_or_get_vulkan_binaries(const std::string& shader_source, const std::string& file_path, VkShaderStageFlagBits stage)
 {
     std::vector<u32> code;
     shaderc::CompileOptions options;
@@ -171,7 +175,7 @@ std::vector<u32> VulkanShader::compile_or_get_vulkan_binaries(const std::string&
     return code;
 }
 
-void VulkanShader::reflect(const VkShaderStageFlagBits shader_stage, const std::vector<u32>& code)
+void Shader::reflect(const VkShaderStageFlagBits shader_stage, const std::vector<u32>& code)
 {
     spirv_cross::Compiler compiler(code);
     spirv_cross::ShaderResources resources = compiler.get_shader_resources();

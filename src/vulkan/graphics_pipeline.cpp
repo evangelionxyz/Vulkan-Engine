@@ -1,43 +1,18 @@
 // Copyright (c) 2025 Evangelion Manuhutu
 
-#include "vulkan_graphics_pipeline.hpp"
+#include "graphics_pipeline.hpp"
 #include "vulkan_wrapper.hpp"
 
 #include <algorithm>
 
 #include "vulkan_context.hpp"
 
-VulkanGraphicsPipeline::VulkanGraphicsPipeline(VkRenderPass render_pass)
-    : m_RenderPass(render_pass), m_Handle(VK_NULL_HANDLE), m_Layout(VK_NULL_HANDLE)
+GraphicsPipeline::GraphicsPipeline()
+    : m_Handle(VK_NULL_HANDLE), m_Layout(VK_NULL_HANDLE)
 {
 }
 
-void VulkanGraphicsPipeline::begin(const VkCommandBuffer command_buffer, const VkFramebuffer framebuffer, const VkClearValue &clear_color, const VkExtent2D &extent) const
-{
-    const VkRect2D render_area = {
-        .offset = { 0, 0 },
-        .extent = extent
-    };
-
-    VkRenderPassBeginInfo render_pass_begin_info = {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .pNext = VK_NULL_HANDLE,
-        .renderPass = m_RenderPass,
-        .framebuffer = framebuffer,
-        .renderArea = render_area,
-        .clearValueCount = 1,
-        .pClearValues = &clear_color,
-    };
-
-    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE); // render pass
-}
-
-void VulkanGraphicsPipeline::end(const VkCommandBuffer command_buffer)
-{
-    vkCmdEndRenderPass(command_buffer);
-}
-
-void VulkanGraphicsPipeline::destroy()
+void GraphicsPipeline::destroy()
 {
     auto device = VulkanContext::get()->get_device();
     
@@ -56,13 +31,18 @@ void VulkanGraphicsPipeline::destroy()
     m_Shaders.clear();
 }
 
-VulkanGraphicsPipeline& VulkanGraphicsPipeline::add_shader(const Ref<VulkanShader>& shader)
+GraphicsPipeline::~GraphicsPipeline()
+{
+    ASSERT(m_Handle == VK_NULL_HANDLE, "Forgeting to call destroy()");
+}
+
+GraphicsPipeline &GraphicsPipeline::add_shader(const Ref<Shader> &shader)
 {
     m_Shaders.push_back(shader);
     return *this;
 }
 
-void VulkanGraphicsPipeline::build(const VulkanGraphicsPipelineInfo& info)
+void GraphicsPipeline::build(const GraphicsPipelineInfo& info)
 {
     auto device = VulkanContext::get()->get_device();
 
@@ -155,7 +135,7 @@ void VulkanGraphicsPipeline::build(const VulkanGraphicsPipelineInfo& info)
         .pColorBlendState = &color_blend_info,
         .pDynamicState = &dynamic_state_create_info,
         .layout = info.layout,
-        .renderPass = m_RenderPass,
+        .renderPass = info.render_pass,
         .subpass = 0,
         .basePipelineHandle = VK_NULL_HANDLE,
         .basePipelineIndex = -1
@@ -164,7 +144,8 @@ void VulkanGraphicsPipeline::build(const VulkanGraphicsPipelineInfo& info)
     // Create the new pipeline
     VkResult result = vkCreateGraphicsPipelines(device,
         VK_NULL_HANDLE, 1,
-        &pipeline_create_info, VK_NULL_HANDLE, &m_Handle);
+        &pipeline_create_info, VK_NULL_HANDLE, &m_Handle
+    );
 
     VK_ERROR_CHECK(result,"[Vulkan] Failed to recreate graphics pipeline");
 }

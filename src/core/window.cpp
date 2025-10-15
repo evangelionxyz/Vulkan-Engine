@@ -20,24 +20,20 @@ Window::Window(const i32 width, const i32 height, const char* title)
 
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
-        ASSERT(false, "[Window] Could not initialize GLFW");
+        ASSERT(false, "[Window] Could not initialize SDL3");
     }
 
     m_Window = SDL_CreateWindow(title, width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
-
-
     m_Data.WindowWidth = width;
     m_Data.WindowHeight = height;
 
     Logger::get_instance().push_message("[Window] Window created");
-
     m_Vk = CreateScope<VulkanContext>(this);
 }
 
 Window::~Window()
 {
     m_Vk->destroy();
-
     SDL_DestroyWindow(m_Window);
     SDL_Quit();
     Logger::get_instance().push_message("[Window] Window destroyed");
@@ -56,35 +52,19 @@ void Window::poll_events()
         switch (event.type)
         {
             case SDL_EVENT_WINDOW_RESIZED:
-                {
-                    m_Data.WindowWidth = event.window.data1;
-                    m_Data.WindowHeight = event.window.data2;
+            {
+                m_Data.WindowWidth = event.window.data1;
+                m_Data.WindowHeight = event.window.data2;
 
-                        VulkanContext *vk_context = VulkanContext::get();
-                        vk_context->recreate_swap_chain();
-                    break;
-                }
+                    VulkanContext *vk_context = VulkanContext::get();
+                    vk_context->recreate_swap_chain();
+                break;
+            }
             case SDL_EVENT_QUIT:
-                {
-                    m_Looping = false;
-                    break;
-                }
+            {
+                m_Looping = false;
+                break;
+            }
         }
     }
-}
-
-void Window::present(const glm::vec4 &clear_color)
-{
-    m_Vk->set_clear_color(clear_color);
-    m_Vk->present();
-}
-
-void Window::submit(std::function<void(VkCommandBuffer command_buffer)> func)
-{
-    m_CommandFuncs.push(func);
-}
-
-std::queue<std::function<void(VkCommandBuffer command_buffer)>> &Window::get_command_queue()
-{
-    return m_CommandFuncs;
 }

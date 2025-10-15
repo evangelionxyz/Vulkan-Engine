@@ -56,10 +56,10 @@ static VkFormat map_spirv_type_to_vk_format(const spirv_cross::SPIRType& type)
 }
 
 
-class VulkanShader {
+class Shader {
 public:
-    VulkanShader(const std::filesystem::path& filepath, VkShaderStageFlagBits stage);
-    ~VulkanShader();
+    Shader(const std::filesystem::path& filepath, VkShaderStageFlagBits stage);
+    ~Shader();
 
     const VkPipelineShaderStageCreateInfo &get_stage() { return m_StageCreateInfo; }
     VkShaderModule get_module() const { return m_Module; }

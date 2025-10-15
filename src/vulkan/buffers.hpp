@@ -33,26 +33,27 @@ static void copy_data_to_buffer(VkDevice device, VkDeviceMemory buffer_memory,
     vkUnmapMemory(device, buffer_memory);
 }
 
-class VulkanVertexBuffer
+class VertexBuffer
 {
 public:
-    VulkanVertexBuffer() = default;
+    VertexBuffer() = default;
 
-    VulkanVertexBuffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize buffer_size, VkAllocationCallbacks *allocator);
-    ~VulkanVertexBuffer();
+    VertexBuffer(void *data, VkDeviceSize size);
+    ~VertexBuffer();
+
+    void set_data(void *data, VkDeviceSize size);
+
+    Ref<VertexBuffer> create(void *data, VkDeviceSize size);
     
-    VkDeviceMemory get_buffer_memory() const { return m_VertexBufferMemory; }
-    VkBuffer get_buffer() const { return m_VertexBuffer; }
+    VkDeviceMemory get_buffer_memory() const { return m_BufferMemory; }
+    VkBuffer get_buffer() const { return m_Buffer; }
 
     void destroy();
 
 private:
-    VkDevice m_Device;
-    VkPhysicalDevice m_PhysicalDevice;
     VkDeviceSize m_BufferSize;
-    VkBuffer m_VertexBuffer;
-    VkDeviceMemory m_VertexBufferMemory;
-    VkAllocationCallbacks *m_Allocator;
+    VkBuffer m_Buffer;
+    VkDeviceMemory m_BufferMemory;
 };
 
 #endif

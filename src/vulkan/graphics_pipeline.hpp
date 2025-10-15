@@ -3,18 +3,20 @@
 #ifndef VULKAN_GRAPHICS_PIPELINE_HPP
 #define VULKAN_GRAPHICS_PIPELINE_HPP
 
-#include "vulkan_shader.hpp"
+#include "shader.hpp"
 
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <stdexcept>
 
-struct VulkanGraphicsPipelineInfo
+struct GraphicsPipelineInfo
 {
     // Store actual data, not pointers
     VkVertexInputBindingDescription binding_description;
     std::vector<VkVertexInputAttributeDescription> attribute_descriptions;
     VkPipelineLayout layout;
+    VkExtent2D extent;
+    VkRenderPass render_pass;
 
     VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     VkPolygonMode polygon_mode = VK_POLYGON_MODE_FILL;
@@ -28,7 +30,6 @@ struct VulkanGraphicsPipelineInfo
     VkBlendFactor src_alpha_blend_factor = VK_BLEND_FACTOR_ONE;
     VkBlendFactor dst_alpha_blend_factor = VK_BLEND_FACTOR_ZERO;
     VkBlendOp alpha_blend_op = VK_BLEND_OP_ADD;
-    VkExtent2D extent;
     float line_width = 1.0f;
     bool depth_test = true;
     bool depth_write = false;
@@ -37,28 +38,44 @@ struct VulkanGraphicsPipelineInfo
     bool stencil_test = false;
 };
 
-class VulkanGraphicsPipeline
+class GraphicsPipeline
 {
 public:
-    VulkanGraphicsPipeline(VkRenderPass render_pass);
+    GraphicsPipeline();
+    ~GraphicsPipeline();
 
-    VulkanGraphicsPipeline &add_shader(const Ref<VulkanShader> &shader);
-    void build(const VulkanGraphicsPipelineInfo &info);
-
-    void begin(VkCommandBuffer command_buffer, VkFramebuffer framebuffer, const VkClearValue &clear_color, const VkExtent2D &extent) const;
-    static void end(VkCommandBuffer command_buffer);
+    GraphicsPipeline &add_shader(const Ref<Shader> &shader);
+    void build(const GraphicsPipelineInfo &info);
 
     void destroy();
 
-    VkRenderPass get_render_pass() const { return m_RenderPass; }
     VkPipeline get_handle() const { return m_Handle; }
     VkPipelineLayout get_layout() const { return m_Layout; }
 
 private:
     VkPipeline m_Handle;
     VkPipelineLayout m_Layout;
-    VkRenderPass m_RenderPass;
-    std::vector<Ref<VulkanShader>> m_Shaders;
+    std::vector<Ref<Shader>> m_Shaders;
+};
+
+struct DrawArguments
+{
+    uint32_t vertex_count = 0;
+    uint32_t instance_count = 1;
+    uint32_t first_vertex = 0;
+    uint32_t first_instance = 0;
+    int32_t vertex_offset = 0;
+};
+
+struct GraphicsState
+{
+    VkPipeline pipeline;
+    VkFramebuffer framebuffer;
+    VkRenderPass render_pass;
+    VkViewport viewport;
+    VkRect2D scissor;
+    VkClearValue clear_value;
+    std::vector<VkBuffer> vertex_buffers;
 };
 
 #endif

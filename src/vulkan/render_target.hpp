@@ -8,7 +8,7 @@
 
 #include "core/types.hpp"
 
-struct VulkanRenderTargetAttachment
+struct RenderTargetAttachment
 {
     VkFormat format;
     VkImageUsageFlags usage;
@@ -17,24 +17,24 @@ struct VulkanRenderTargetAttachment
     VkImageView imageView;
 };
 
-struct VulkanRenderTargetInfo
+struct RenderTargetInfo
 {
-    std::vector<VulkanRenderTargetAttachment> attachments;
+    std::vector<RenderTargetAttachment> attachments;
     VkRenderPass renderPass = VK_NULL_HANDLE;
 };
 
-class VulkanRenderTarget
+class RenderTarget
 {
 public:
-    VulkanRenderTarget(const VulkanRenderTargetInfo &info, const u32 width, const u32 height);
-    ~VulkanRenderTarget();
+    RenderTarget(const RenderTargetInfo &info, const u32 width, const u32 height);
+    ~RenderTarget();
 
     VkImageView get_image_view(u32 index) const;
     VkFramebuffer get_framebuffer(u32 index) const;
 private:
     std::vector<VkImageView> m_ImageViews;
     std::vector<VkFramebuffer> m_Framebuffers;
-    VulkanRenderTargetInfo m_Info;
+    RenderTargetInfo m_Info;
 };
 
 #endif

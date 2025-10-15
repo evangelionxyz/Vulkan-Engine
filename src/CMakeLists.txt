@@ -1,23 +1,12 @@
-add_executable(Vulkan
-    core/window.cpp
-    core/application.cpp
-    vulkan_engine.cpp
-    vulkan/vulkan_context.cpp
-    vulkan/vulkan_shader.cpp
-    vulkan/vulkan_physical_device.cpp
-    vulkan/vulkan_queue.cpp
-    vulkan/vulkan_swapchain.cpp
-    vulkan/vulkan_buffer.cpp
-    vulkan/vulkan_graphics_pipeline.cpp
-    vulkan/vulkan_command_buffer.hpp
-    vulkan/vulkan_command_buffer.cpp
-    vulkan/vulkan_render_target.hpp
-    vulkan/vulkan_render_target.cpp
+file(GLOB_RECURSE VULKAN_APP_SRC CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
 )
+
+add_executable(Vulkan ${VULKAN_APP_SRC})
 
 target_include_directories(Vulkan PRIVATE
     ${ROOT_DIR}/src
-
     ${TP_DIR}
     ${TP_DIR}/glm
     ${TP_DIR}/imgui

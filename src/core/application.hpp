@@ -2,17 +2,18 @@
 #ifndef APPLICATION_HPP
 #define APPLICATION_HPP
 
-#include <memory>
-#include <vector>
-
-#include <vulkan/vulkan_core.h>
-
-#include "vulkan/vulkan_shader.hpp"
 #include "window.hpp"
 
+#include <memory>
+#include <vector>
 #include <glm/glm.hpp>
 
 class VulkanContext;
+class CommandBuffer;
+class GraphicsPipeline;
+class VertexBuffer;
+class Shader;
+
 class Application {
 public:
     Application(i32 argc, char **argv);
@@ -21,12 +22,20 @@ public:
     void run();
 
 private:
+    void create_graphics_pipeline();
+    void record_frame(uint32_t frame_index);
+
     void imgui_init();
     void imgui_begin();
     void imgui_end();
     void imgui_shutdown() const;
 
+    Ref<GraphicsPipeline> m_Pipeline;
+    Ref<VertexBuffer> m_VertexBuffer;
+    std::vector<VkDescriptorSetLayout> m_DescLayouts;
+    Ref<CommandBuffer> m_CommandBuffer;
     Scope<Window> m_Window;
+    VulkanContext *m_Vk;
     glm::vec4 m_ClearColor = glm::vec4(1.0f);
 };
 

@@ -4,6 +4,8 @@
 #define VULKAN_QUEUE_HPP
 
 #include <vulkan/vulkan.h>
+#include <vector>
+
 #include "core/types.hpp"
 
 class VulkanQueue {
@@ -11,8 +13,8 @@ public:
     VulkanQueue() = default;
     explicit VulkanQueue(u32 queue_family_index, u32 queue_index);
 
-    void submit_sync(VkCommandBuffer command_buffer) const;
-    void submit_async(VkCommandBuffer cmd) const;
+    void submit_sync(const std::vector<VkCommandBuffer> &command_buffers) const;
+    void submit_async(const std::vector<VkCommandBuffer> &command_buffers) const;
     VkResult present(u32 image_index, VkSwapchainKHR swap_chain) const;
     void wait_idle() const;
     void destroy() const;
@@ -28,7 +30,7 @@ private:
     VkSemaphore m_ImageAvailableSemaphore  = VK_NULL_HANDLE;
     VkSemaphore m_RenderFinishedSemaphore  = VK_NULL_HANDLE;
     VkFence m_InFlightFence                = VK_NULL_HANDLE;
-    mutable u32 m_ImageIndex               = 0;
+    mutable uint32_t m_ImageIndex          = 0;
 };
 
 #endif //VULKAN_QUEUE_H

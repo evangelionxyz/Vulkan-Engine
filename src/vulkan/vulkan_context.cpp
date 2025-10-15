@@ -5,13 +5,10 @@
 #include <algorithm>
 #include <cstdio>
 #include <iterator>
-#include <unordered_map>
 
 #include "core/assert.hpp"
 #include "core/logger.hpp"
-
 #include "vulkan_wrapper.hpp"
-#include "vulkan_shader.hpp"
 
 #include "core/window.hpp"
 
@@ -23,9 +20,7 @@
 
 #include <backends/imgui_impl_vulkan.h>
 
-#include <queue>
-#include <functional>
-#include <ranges>
+#include <stdexcept>
 
 static VulkanContext *s_Instance = nullptr;
 
@@ -52,37 +47,21 @@ VulkanContext::VulkanContext(Window *window)
     m_Queue = VulkanQueue(m_QueueFamily, 0);
     create_descriptor_pool();
 
-    create_graphics_pipeline();
-
     create_framebuffers();
-
-    create_command_buffers();
 }
 
 void VulkanContext::destroy()
 {
     Logger::get_instance().push_message("=== Destroying Vulkan ===");
-
-    m_Buffer->destroy();
-    free_command_buffers();
+    m_Queue.wait_idle();
     destroy_framebuffers();
     reset_command_pool();
     vkDestroyRenderPass(m_Device, m_RenderPass, VK_NULL_HANDLE);
-    m_GraphicsPipeline->destroy();
-
-    // Destroy descriptor set layouts
-    for (auto layout : m_DescriptorSetLayouts)
-    {
-        vkDestroyDescriptorSetLayout(m_Device, layout, VK_NULL_HANDLE);
-    }
-    m_DescriptorSetLayouts.clear();
-
     vkDestroyDescriptorPool(m_Device, m_DescriptorPool, VK_NULL_HANDLE);
     vkDestroyCommandPool(m_Device, m_CommandPool, VK_NULL_HANDLE);
 
     m_Queue.destroy();
     m_SwapChain.destroy();
-
     vkDestroySurfaceKHR(m_Instance, m_Surface, VK_NULL_HANDLE);
     Logger::get_instance().push_message("[Vulkan] Window surface destroyed");
 
@@ -151,10 +130,27 @@ void VulkanContext::create_render_pass()
     Logger::get_instance().push_message("[Vulkan] Render pass created");
 }
 
-void VulkanContext::destroy_framebuffers() const
+VkResult VulkanContext::reset_command_buffer(VkCommandBuffer command_buffer)
 {
-    for (const auto framebuffer : m_MainFrameBuffers)
+    VkResult result = vkResetCommandBuffer(command_buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+    return result;
+}
+
+void VulkanContext::submit(const std::vector<VkCommandBuffer> &command_buffers)
+{
+    m_Queue.submit_async(command_buffers);
+}
+
+uint32_t VulkanContext::get_current_image_index()
+{
+    return m_ImageIndex;
+}
+
+void VulkanContext::destroy_framebuffers()
+{
+    for (const auto framebuffer : m_Framebuffers)
         vkDestroyFramebuffer(m_Device, framebuffer, VK_NULL_HANDLE);
+    m_Framebuffers.clear();
 }
 
 void VulkanContext::reset_command_pool() const
@@ -163,14 +159,6 @@ void VulkanContext::reset_command_pool() const
 
     VkResult result = vkResetCommandPool(m_Device, m_CommandPool, 0);
     VK_ERROR_CHECK(result, "[Vulkan] Failed to reset command pool");
-}
-
-void VulkanContext::set_clear_color(const glm::vec4 &clear_color)
-{
-    m_ClearValue.color.float32[0] = clear_color.r;
-    m_ClearValue.color.float32[1] = clear_color.g;
-    m_ClearValue.color.float32[2] = clear_color.b;
-    m_ClearValue.color.float32[3] = clear_color.a;
 }
 
 VkInstance VulkanContext::get_instance() const
@@ -211,30 +199,6 @@ VulkanSwapchain* VulkanContext::get_swap_chain()
 VulkanContext *VulkanContext::get()
 {
     return s_Instance;
-}
-
-void VulkanContext::create_command_buffers()
-{
-    const u32 image_count = m_SwapChain.get_image_count();
-    m_MainCmdBuffers.resize(image_count);
-
-    VkCommandBufferAllocateInfo alloc_info = {};
-    alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.commandBufferCount = image_count;
-    alloc_info.commandPool        = m_CommandPool;
-    alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-    VkResult result = vkAllocateCommandBuffers(m_Device, &alloc_info, m_MainCmdBuffers.data());
-    VK_ERROR_CHECK(result, "[Vulkan] Failed to create command buffers");
-
-    Logger::get_instance().push_message("[Vulkan] Command buffers created");
-}
-
-void VulkanContext::free_command_buffers() const
-{
-    m_Queue.wait_idle();
-    const u32 count = static_cast<u32>(m_MainCmdBuffers.size());
-    vkFreeCommandBuffers(m_Device, m_CommandPool, count, m_MainCmdBuffers.data());
 }
 
 VkCommandPool VulkanContext::get_command_pool() const
@@ -460,155 +424,30 @@ void VulkanContext::create_descriptor_pool()
     VK_ERROR_CHECK(result, "[Vulkan] Failed to create command pool");
 }
 
-void VulkanContext::create_graphics_pipeline()
-{
-    const Ref<VulkanShader> vertex_shader = CreateRef<VulkanShader>("res/shaders/default.vert", VK_SHADER_STAGE_VERTEX_BIT);
-    const Ref<VulkanShader> fragment_shader = CreateRef<VulkanShader>("res/shaders/default.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    std::vector<Vertex> vertices =
-    {
-        {{ -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Position, Color
-        {{ 0.0f,  0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{ 0.5f,  -0.5f}, {0.0f, 0.0f, 1.0f}}
-    };
-    VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
-
-    m_Buffer = CreateRef<VulkanVertexBuffer>(m_Device, m_PhysicalDevice.get_selected_device().device, buffer_size, VK_NULL_HANDLE);
-    copy_data_to_buffer(m_Device, m_Buffer->get_buffer_memory(), vertices.data(), buffer_size);
-
-    // Build vertex input state from reflection if available; fallback to hardcoded Vertex layout
-    VkVertexInputBindingDescription binding_desc = {};
-    std::vector<VkVertexInputAttributeDescription> attr_desc;
-    const auto& reflected_attrs = vertex_shader->get_vertex_attributes();
-    if (!reflected_attrs.empty())
-    {
-        binding_desc.binding = 0;
-        binding_desc.stride = vertex_shader->get_vertex_stride();
-        binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        attr_desc = reflected_attrs; // copy
-    }
-    else
-    {
-        binding_desc = Vertex::get_vk_binding_desc();
-        auto arr = Vertex::get_vk_attribute_desc();
-        attr_desc.assign(arr.begin(), arr.end());
-    }
-
-    // Merge descriptor set layouts from both shaders
-    std::unordered_map<u32, std::vector<VkDescriptorSetLayoutBinding>> merged_sets;
-    auto merge_sets = [&merged_sets](const std::unordered_map<u32, std::vector<VkDescriptorSetLayoutBinding>>& src)
-    {
-        for (const auto& [set, bindings] : src)
-        {
-            auto& dst_vec = merged_sets[set];
-            for (const auto& b : bindings)
-            {
-                bool merged = false;
-                for (auto& existing : dst_vec)
-                {
-                    if (existing.binding == b.binding && existing.descriptorType == b.descriptorType)
-                    {
-                        existing.stageFlags |= b.stageFlags; // merge stage flags
-                        merged = true;
-                        break;
-                    }
-                }
-                if (!merged)
-                    dst_vec.push_back(b);
-            }
-        }
-    };
-    merge_sets(vertex_shader->get_descriptor_set_layout_bindings());
-    merge_sets(fragment_shader->get_descriptor_set_layout_bindings());
-
-    // Create VkDescriptorSetLayout(s)
-    std::vector<std::pair<u32, VkDescriptorSetLayout>> set_layout_pairs;
-    set_layout_pairs.reserve(merged_sets.size());
-    for (auto& [set_index, bindings] : merged_sets)
-    {
-        VkDescriptorSetLayoutCreateInfo set_info { };
-        set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        set_info.bindingCount = static_cast<u32>(bindings.size());
-        set_info.pBindings = bindings.data();
-        VkDescriptorSetLayout set_layout = VK_NULL_HANDLE;
-        VkResult res = vkCreateDescriptorSetLayout(m_Device, &set_info, nullptr, &set_layout);
-        VK_ERROR_CHECK(res, "[Vulkan] Failed to create descriptor set layout");
-        set_layout_pairs.emplace_back(set_index, set_layout);
-        m_DescriptorSetLayouts.push_back(set_layout); // Store for cleanup
-    }
-    // Sort by set index and create array
-    std::sort(set_layout_pairs.begin(), set_layout_pairs.end(), [](auto& a, auto& b){ return a.first < b.first; });
-    std::vector<VkDescriptorSetLayout> set_layouts;
-    set_layouts.reserve(set_layout_pairs.size());
-    for (auto& p : set_layout_pairs) set_layouts.push_back(p.second);
-
-    // Merge push constant ranges
-    std::vector<VkPushConstantRange> push_ranges = vertex_shader->get_push_constant_ranges();
-    for (const auto& pr : fragment_shader->get_push_constant_ranges())
-    {
-        bool merged = false;
-        for (auto& ex : push_ranges)
-        {
-            if (ex.offset == pr.offset && ex.size == pr.size)
-            {
-                ex.stageFlags |= pr.stageFlags;
-                merged = true;
-                break;
-            }
-        }
-        if (!merged)
-            push_ranges.push_back(pr);
-    }
-
-    VkPipelineLayoutCreateInfo layout_create_info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = static_cast<u32>(set_layouts.size()),
-        .pSetLayouts = set_layouts.empty() ? nullptr : set_layouts.data(),
-        .pushConstantRangeCount = static_cast<u32>(push_ranges.size()),
-        .pPushConstantRanges = push_ranges.empty() ? nullptr : push_ranges.data()
-    };
-
-    // create pipeline layout
-    VkPipelineLayout pipeline_layout;
-    VkResult result = vkCreatePipelineLayout(m_Device, &layout_create_info, nullptr, &pipeline_layout);
-    VK_ERROR_CHECK(result, "[Vulkan] Failed to create pipeline layout");
-
-    VulkanGraphicsPipelineInfo pipeline_info {
-        .binding_description = binding_desc,
-        .attribute_descriptions = attr_desc,  // This copies the vector
-        .layout = pipeline_layout,
-        .extent = m_SwapChain.get_extent(),
-    };
-
-    m_GraphicsPipeline = CreateRef<VulkanGraphicsPipeline>(m_RenderPass);
-    m_GraphicsPipeline->add_shader(vertex_shader)
-        .add_shader(fragment_shader)
-        .build(pipeline_info);
-}
-
 void VulkanContext::create_framebuffers()
 {
     const auto extent = m_SwapChain.get_extent();
-
     const u32 image_count = m_SwapChain.get_image_count();
-
-    m_MainFrameBuffers.resize(image_count);
+    m_Framebuffers.resize(image_count);
 
     for (u32 i = 0; i < image_count; i++)
     {
         VkImageView attachments[] = { m_SwapChain.get_image_view(i) };
-        VkFramebufferCreateInfo framebuffer_create_info = {};
-        framebuffer_create_info.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebuffer_create_info.renderPass      = m_RenderPass;
-        framebuffer_create_info.width           = extent.width;
-        framebuffer_create_info.height          = extent.height;
-        framebuffer_create_info.layers          = 1;
-        framebuffer_create_info.pAttachments    = attachments;
-        framebuffer_create_info.attachmentCount = std::size(attachments);
+        VkFramebufferCreateInfo framebuffer_create_info = {
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .pNext = VK_NULL_HANDLE,
+            .renderPass = m_RenderPass,
+            .attachmentCount = static_cast<uint32_t>(std::size(attachments)),
+            .pAttachments = attachments,
+            .width = extent.width,
+            .height = extent.height,
+            .layers = 1
+        };
 
-        VkResult result = vkCreateFramebuffer(m_Device, &framebuffer_create_info, VK_NULL_HANDLE, &m_MainFrameBuffers[i]);
+        VkResult result = vkCreateFramebuffer(m_Device, &framebuffer_create_info, VK_NULL_HANDLE, &m_Framebuffers[i]);
         VK_ERROR_CHECK(result, "[Vulkan] Failed to create framebuffer");
     }
+
     Logger::get_instance().push_message("[Vulkan] Frame buffer created");
 }
 
@@ -621,61 +460,14 @@ void VulkanContext::recreate_swap_chain()
     create_framebuffers();
 }
 
-void VulkanContext::record_command_buffer(VkCommandBuffer command_buffer, u32 image_index)
-{
-    // 1. begin command buffer
-    VkCommandBufferBeginInfo begin_info = {};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-    begin_info.pNext = VK_NULL_HANDLE;
-    begin_info.pInheritanceInfo = VK_NULL_HANDLE;
-    vkBeginCommandBuffer(command_buffer, &begin_info);
-
-    // 2. begin render pass
-    const auto extent = m_SwapChain.get_extent();
-    m_GraphicsPipeline->begin(command_buffer, m_MainFrameBuffers[image_index], m_ClearValue, extent);
-
-    // 3. begin pipeline
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline->get_handle());
-
-    const VkViewport viewport {
-        .x        = 0.0f,
-        .y        = 0.0f,
-        .width    = static_cast<float>(extent.width),
-        .height   = static_cast<float>(extent.height),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-
-    const VkRect2D scissor = {
-        .offset = { 0, 0 },
-        .extent = extent
-    };
-
-    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
-    vkCmdSetScissor(command_buffer, 0, 1, &scissor);
-
-    VkBuffer vertexBuffers[] = { m_Buffer->get_buffer() };
-    VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
-
-    vkCmdDraw(command_buffer, 3, 1, 0, 0);
-
-    m_GraphicsPipeline->end(command_buffer);
-
-    vkEndCommandBuffer(command_buffer); // !command buffer
-}
-
-void VulkanContext::present()
+std::optional<uint32_t> VulkanContext::begin_frame()
 {
     m_Queue.wait_idle();
-
-    u32 image_index = 0;
-    VkResult result = m_SwapChain.acquire_next_image(&image_index, m_Queue.get_semaphore());
+    VkResult result = m_SwapChain.acquire_next_image(&m_ImageIndex, m_Queue.get_semaphore());
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         recreate_swap_chain();
-        return;
+        return std::nullopt;
     }
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
     {
@@ -683,14 +475,21 @@ void VulkanContext::present()
     }
 
     m_Queue.wait_and_reset_fences();
-    vkResetCommandBuffer(m_MainCmdBuffers[image_index], 0);
-    record_command_buffer(m_MainCmdBuffers[image_index], image_index);
 
-    m_Queue.submit_async(m_MainCmdBuffers[image_index]);
+    return m_ImageIndex;
+}
 
-    result = m_Queue.present(image_index, m_SwapChain.get_handle());
+void VulkanContext::present()
+{
+    VkResult result = m_Queue.present(m_ImageIndex, m_SwapChain.get_handle());
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
         recreate_swap_chain();
     }
+}
+
+VkFramebuffer VulkanContext::get_framebuffer(uint32_t image_index) const
+{
+    ASSERT(image_index < m_Framebuffers.size(), "[Vulkan] Framebuffer index out of range");
+    return m_Framebuffers[image_index];
 }

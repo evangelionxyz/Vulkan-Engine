@@ -1,15 +1,15 @@
 // Copyright (c) 2025 Evangelion Manuhutu
 
-#include "vulkan_render_target.hpp"
+#include "render_target.hpp"
 
 #include "vulkan_context.hpp"
 
-VulkanRenderTarget::VulkanRenderTarget(const VulkanRenderTargetInfo &info, const u32 width, const u32 height)
+RenderTarget::RenderTarget(const RenderTargetInfo &info, const u32 width, const u32 height)
     : m_Info(info)
 {
 }
 
-VulkanRenderTarget::~VulkanRenderTarget()
+RenderTarget::~RenderTarget()
 {
     const VkDevice device = VulkanContext::get()->get_device();
     for (const auto &iv : m_ImageViews)
@@ -29,12 +29,12 @@ VulkanRenderTarget::~VulkanRenderTarget()
     }
 }
 
-VkImageView VulkanRenderTarget::get_image_view(u32 index) const
+VkImageView RenderTarget::get_image_view(u32 index) const
 {
     return m_ImageViews[index]; 
 }
 
-VkFramebuffer VulkanRenderTarget::get_framebuffer(u32 index) const
+VkFramebuffer RenderTarget::get_framebuffer(u32 index) const
 {
     return m_Framebuffers[index];
 }
