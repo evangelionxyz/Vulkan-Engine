@@ -206,31 +206,31 @@ static void vk_print_image_usage_flags(const VkImageUsageFlags usage)
 {
     if (usage & VK_IMAGE_USAGE_SAMPLED_BIT)
     {
-        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Sampled is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Sampled is supported");
     }
     else if (usage & VK_IMAGE_USAGE_STORAGE_BIT)
     {
-        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Storage is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Storage is supported");
     }
     else if (usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
     {
-        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Input attachment is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Input attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
     {
-        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Depth stencil attachment is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Depth stencil attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
     {
-        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Color attachment is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Color attachment is supported");
     }
     else if (usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
     {
-        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Transfer dst is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Transfer dst is supported");
     }
     else if (usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
     {
-        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Transfer src is supported");
+        Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Transfer src is supported");
     }
 }
 
@@ -262,4 +262,4 @@ static void vk_print_memory_property(VkMemoryPropertyFlags properties)
     }
 }
 
-#endif //VULKAN_WRAPPER_H
+#endif //VULKAN_WRAPPER_HPP

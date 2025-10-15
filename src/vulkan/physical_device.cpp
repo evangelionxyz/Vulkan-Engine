@@ -28,7 +28,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, VkSurfaceKHR sur
         vkGetPhysicalDeviceProperties(physical_device, &current_device.properties);
         Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Device name: {}", current_device.properties.deviceName);
         u32 apiVersion = current_device.properties.apiVersion;
-        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] API Version {}.{}.{}.{}",
+        Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] API Version {}.{}.{}.{}",
             VK_API_VERSION_VARIANT(apiVersion),
             VK_API_VERSION_MAJOR(apiVersion),
             VK_API_VERSION_MINOR(apiVersion),
@@ -36,7 +36,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, VkSurfaceKHR sur
 
         u32 queue_families_count = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, nullptr);
-        Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Queue Family Count: {}", queue_families_count);
+        Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Queue Family Count: {}", queue_families_count);
 
         current_device.queue_family_properties.resize(queue_families_count);
         current_device.queue_support_present.resize(queue_families_count);
@@ -47,20 +47,20 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkInstance instance, VkSurfaceKHR sur
         for (u32 queue_index = 0; queue_index < queue_families_count; queue_index++)
         {
             const VkQueueFamilyProperties& queue_family_properties = current_device.queue_family_properties[queue_index];
-
-            Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Family {} Num Queues: {}", queue_index, queue_families_count);
-
             VkQueueFlags flags = queue_family_properties.queueFlags;
 
             Logger::get_instance().push_message(LoggingLevel::Info,
-                "\t[Vulkan] GFX {}, Compute {}, Transfer {}, Sparse binding {}",
+                "[Vulkan] Family {} Num Queues: {}\tGFX {}, Compute {}, Transfer {}, Sparse binding {}",
+                queue_index, queue_families_count,
                 (flags & VK_QUEUE_GRAPHICS_BIT)       ? "Yes" : "No",
                 (flags & VK_QUEUE_COMPUTE_BIT)        ? "Yes" : "No",
                 (flags & VK_QUEUE_TRANSFER_BIT)       ? "Yes" : "No",
                 (flags & VK_QUEUE_SPARSE_BINDING_BIT) ? "Yes" : "No"
             );
+
             result = vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, queue_index, surface,
                 &current_device.queue_support_present[queue_index]);
+            
             VK_ERROR_CHECK(result, "[Vulkan] Failed to get physical surface support");
         }
 
@@ -140,7 +140,7 @@ VkPresentModes VulkanPhysicalDevice::get_surface_present_modes(VkPhysicalDevice 
     result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count,
         present_modes.data());
     VK_ERROR_CHECK(result, "[Vulkan] Failed to get physical device surface");
-    Logger::get_instance().push_message(LoggingLevel::Info, "\t[Vulkan] Present Modes Count: {}", present_mode_count);
+    Logger::get_instance().push_message(LoggingLevel::Info, "[Vulkan] Present Modes Count: {}", present_mode_count);
 
     return present_modes;
 }

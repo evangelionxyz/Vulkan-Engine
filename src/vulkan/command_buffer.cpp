@@ -88,13 +88,15 @@ void CommandBuffer::set_graphics_state(const GraphicsState &state)
 
     if (state.index_buffer.buffer)
     {
-        vkCmdBindIndexBuffer(active_handle, state.index_buffer.buffer, state.index_buffer.offset, state.index_buffer.index_type);
+        vkCmdBindIndexBuffer(active_handle, state.index_buffer.buffer, state.index_buffer.offset,
+            state.index_buffer.index_type);
     }
 
     if (!state.descriptor_sets.empty())
     {
         vkCmdBindDescriptorSets(active_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, state.pipeline_layout,
-            0, static_cast<uint32_t>(state.descriptor_sets.size()), state.descriptor_sets.data(), 0, nullptr);
+            0, static_cast<uint32_t>(state.descriptor_sets.size()), state.descriptor_sets.data(),
+            0, nullptr);
     }
 }
 
@@ -105,10 +107,12 @@ void CommandBuffer::draw(const DrawArguments &args)
 
 void CommandBuffer::draw_indexed(const DrawArguments &args)
 {
-    vkCmdDrawIndexed(get_active_handle(), args.vertex_count, args.instance_count, args.first_vertex, args.vertex_offset, args.first_instance);
+    vkCmdDrawIndexed(get_active_handle(), args.vertex_count, args.instance_count, args.first_vertex,
+        args.vertex_offset, args.first_instance);
 }
 
-void CommandBuffer::set_push_constants(VkShaderStageFlagBits shader_stage, VkPipelineLayout layout, const void *data, uint32_t size, uint32_t offset)
+void CommandBuffer::set_push_constants(VkShaderStageFlagBits shader_stage, VkPipelineLayout layout,
+    const void *data, uint32_t size, uint32_t offset)
 {
     vkCmdPushConstants(get_active_handle(), layout, shader_stage, 0, size, data);
 }
