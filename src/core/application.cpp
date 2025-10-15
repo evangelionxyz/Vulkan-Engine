@@ -142,10 +142,10 @@ void Application::create_graphics_pipeline()
     std::vector<Vertex> vertices =
     {
         // Position, Color (clockwise winding)
-        {{ -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{ -0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{  0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}}
+        {{ -0.5f, -0.5f, 0.0f }, {0.0f, 0.0f, 1.0f}},
+        {{ -0.5f,  0.5f, 0.0f }, {1.0f, 0.0f, 0.0f}},
+        {{  0.5f,  0.5f, 0.0f }, {0.0f, 1.0f, 0.0f}},
+        {{  0.5f, -0.5f, 0.0f }, {0.0f, 1.0f, 0.0f}}
     };
 
     std::vector<uint32_t> indices = 
@@ -162,19 +162,6 @@ void Application::create_graphics_pipeline()
     VkVertexInputBindingDescription binding_desc = {};
     std::vector<VkVertexInputAttributeDescription> attr_desc;
     const auto& reflected_attrs = vertex_shader->get_vertex_attributes();
-    if (!reflected_attrs.empty())
-    {
-        binding_desc.binding = 0;
-        binding_desc.stride = vertex_shader->get_vertex_stride();
-        binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        attr_desc = reflected_attrs; // copy
-    }
-    else
-    {
-        binding_desc = Vertex::get_vk_binding_desc();
-        auto arr = Vertex::get_vk_attribute_desc();
-        attr_desc.assign(arr.begin(), arr.end());
-    }
 
     // Merge descriptor set layouts from both shaders
     std::unordered_map<u32, std::vector<VkDescriptorSetLayoutBinding>> merged_sets;
