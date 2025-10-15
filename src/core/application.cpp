@@ -9,6 +9,7 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include <algorithm>
+#include <thread>
 #include <unordered_map>
 
 #include "logger.hpp"
@@ -81,8 +82,28 @@ void Application::run()
 {
     imgui_init();
 
-    SDL_Event event;
+    std::thread render_thread = std::thread([&]()
+    {
+        while (m_Window->is_looping())
+        {            
+            if (auto frame_index = m_Vk->begin_frame())
+            {
+                imgui_begin();
+                ImGui::ShowDemoWindow();
+                ImGui::Begin("Settings");
+                ImGui::ColorEdit4("clear color", &m_ClearColor[0]);
+                ImGui::End();
+                imgui_end();
 
+                VkFramebuffer framebuffer = m_Vk->get_framebuffer(*frame_index);
+                record_frame(framebuffer, *frame_index);
+
+                m_Vk->present();
+            }
+        }
+    });
+
+    SDL_Event event;
     while (m_Window->is_looping())
     {
         while (SDL_PollEvent(&event))
@@ -90,24 +111,9 @@ void Application::run()
             ImGui_ImplSDL3_ProcessEvent(&event);
             m_Window->poll_events(&event);
         }
-
-        float delta_time = SDL_GetTicks();
-        on_update(delta_time);
-        
-        if (auto frame_index = m_Vk->begin_frame())
-        {
-            imgui_begin();
-            ImGui::ShowDemoWindow();
-            ImGui::Begin("Settings");
-            ImGui::ColorEdit4("clear color", &m_ClearColor[0]);
-            ImGui::End();
-            imgui_end();
-
-            record_frame(*frame_index);
-
-            m_Vk->present();
-        }
     }
+
+    render_thread.join();
 }
 
 void Application::on_update(float delta_time)
@@ -267,7 +273,7 @@ void Application::create_graphics_pipeline()
         .build(pipeline_info);
 }
 
-void Application::record_frame(uint32_t frame_index)
+void Application::record_frame(VkFramebuffer framebuffer, uint32_t frame_index)
 {
     const VkExtent2D extent = m_Vk->get_swap_chain()->get_extent();
 
@@ -297,7 +303,7 @@ void Application::record_frame(uint32_t frame_index)
 
     GraphicsState state;
     state.pipeline = m_Pipeline->get_handle();
-    state.framebuffer = m_Vk->get_framebuffer(frame_index);
+    state.framebuffer = framebuffer;
     state.render_pass = m_Vk->get_render_pass();
     state.scissor = scissor;
     state.viewport = viewport;

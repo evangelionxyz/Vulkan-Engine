@@ -25,8 +25,6 @@ public:
     void destroy_framebuffers();
     void reset_command_pool() const;
 
-    void set_clear_color(const glm::vec4 &clear_color);
-
     VkInstance get_instance() const;
     VkDevice get_device() const;
     VkPhysicalDevice get_physical_device() const;
@@ -39,7 +37,8 @@ public:
     VulkanSwapchain *get_swap_chain();
     static VulkanContext *get();
 
-    void recreate_swap_chain();
+    void should_recreate_swapchain();
+    
     std::optional<uint32_t> begin_frame();
     void present();
 
@@ -60,6 +59,7 @@ public:
     void submit(const std::vector<VkCommandBuffer> &command_buffers);
     uint32_t get_current_image_index();
 private:
+    void recreate_swap_chain();
 
     Window* m_Window                   = nullptr;
     VkInstance m_Instance              = VK_NULL_HANDLE;
@@ -78,6 +78,8 @@ private:
 
     VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;
     std::vector<VkFramebuffer> m_Framebuffers;
+
+    bool m_ShouldRecreatingSwapChain = false;
 };
 
 #endif //VULKAN_CONTEXT_HPP

@@ -29,7 +29,7 @@ private:
     void on_framebuffer_resize(uint32_t width, uint32_t height);
 
     void create_graphics_pipeline();
-    void record_frame(uint32_t frame_index);
+    void record_frame(VkFramebuffer framebuffer, uint32_t frame_index);
 
     void imgui_init();
     void imgui_begin();

@@ -67,9 +67,8 @@ void Window::poll_events(SDL_Event *event)
             {
                 m_FramebufferResizeCallback(m_Data.FbWidth, m_Data.FbHeight);
             }
-            
-            VulkanContext *vk_context = VulkanContext::get();
-            vk_context->recreate_swap_chain();
+
+            VulkanContext::get()->should_recreate_swapchain();
             break;
         }
         case SDL_EVENT_QUIT:

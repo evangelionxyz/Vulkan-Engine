@@ -381,6 +381,8 @@ void VulkanContext::create_swapchain()
     const VkSurfaceFormatKHR format = vk_choose_surface_format(m_PhysicalDevice.get_selected_device().surface_formats);
     const VkImageUsageFlags imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     m_SwapChain = VulkanSwapchain(m_Surface, format, capabilities, present_mode, imageUsage, m_QueueFamily);
+
+    m_ShouldRecreatingSwapChain = false;
 }
 
 void VulkanContext::create_command_pool()
@@ -451,6 +453,11 @@ void VulkanContext::create_framebuffers()
     Logger::get_instance().push_message("[Vulkan] Frame buffer created");
 }
 
+void VulkanContext::should_recreate_swapchain()
+{
+    m_ShouldRecreatingSwapChain = true;
+}
+
 void VulkanContext::recreate_swap_chain()
 {
     vkDeviceWaitIdle(m_Device);
@@ -462,6 +469,12 @@ void VulkanContext::recreate_swap_chain()
 
 std::optional<uint32_t> VulkanContext::begin_frame()
 {
+    if (m_ShouldRecreatingSwapChain)
+    {
+        recreate_swap_chain();
+        return std::nullopt;
+    }
+
     m_Queue.wait_idle();
     VkResult result = m_SwapChain.acquire_next_image(&m_ImageIndex, m_Queue.get_semaphore());
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
