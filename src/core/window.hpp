@@ -8,6 +8,7 @@
 #include "vulkan/vulkan_context.hpp"
 
 #include <glm/glm.hpp>
+#include <atomic>
 
 struct WindowData
 {
@@ -48,7 +49,7 @@ private:
     std::function<void(uint32_t width, uint32_t height)> m_FramebufferResizeCallback;
 
     SDL_Window *m_Window;
-    bool m_Looping = true;
+    std::atomic<bool> m_Looping = true;
     WindowData m_Data{};
 };
 
