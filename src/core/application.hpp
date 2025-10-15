@@ -3,10 +3,10 @@
 #define APPLICATION_HPP
 
 #include "window.hpp"
+#include "camera.hpp"
 
 #include <memory>
 #include <vector>
-#include <glm/glm.hpp>
 
 class VulkanContext;
 class CommandBuffer;
@@ -22,6 +22,11 @@ public:
     void run();
 
 private:
+    void on_update(float delta_time);
+
+    void on_window_resize(uint32_t width, uint32_t height);
+    void on_framebuffer_resize(uint32_t width, uint32_t height);
+
     void create_graphics_pipeline();
     void record_frame(uint32_t frame_index);
 
@@ -34,6 +39,7 @@ private:
     Ref<VertexBuffer> m_VertexBuffer;
     std::vector<VkDescriptorSetLayout> m_DescLayouts;
     Ref<CommandBuffer> m_CommandBuffer;
+    Camera m_Camera;
     Scope<Window> m_Window;
     VulkanContext *m_Vk;
     glm::vec4 m_ClearColor = glm::vec4(1.0f);

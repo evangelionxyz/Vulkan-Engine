@@ -159,7 +159,8 @@ std::vector<u32> Shader::compile_or_get_vulkan_binaries(const std::string& shade
         shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(shader_source, vulkan_shader_to_shaderc_kind(stage), file_path.c_str());
         bool success = module.GetCompilationStatus() == shaderc_compilation_status_success;
         std::string error_message = module.GetErrorMessage();
-        ASSERT(success, "[Shader] Compilation failed {}", module.GetErrorMessage().c_str());
+        ASSERT(success, std::format("[Shader] Compilation failed {}", error_message));
+
         code = std::vector<u32>(module.cbegin(), module.cend());
 
         std::ofstream out_file(cached_path, std::ios::binary);

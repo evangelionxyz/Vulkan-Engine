@@ -86,15 +86,15 @@ private:
         {
             case LoggingLevel::Info:
                 color_code = "\033[1;37m";
-                level_str = "[Info]";
+                level_str = "[Info] ";
                 break;
             case LoggingLevel::Error:
                 color_code = "\033[1;31m";
-                level_str = "[Error]";
+                level_str = "[Error] ";
                 break;
             case LoggingLevel::Warning:
                 color_code = "\033[1;33m";
-                level_str = "[Warning]";
+                level_str = "[Warning] ";
                 break;
         }
 

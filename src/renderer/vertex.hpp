@@ -1,4 +1,4 @@
-// Copyright 2024, Evangelion Manuhutu
+// Copyright 2025, Evangelion Manuhutu
 
 #ifndef VERTEX_HPP
 #define VERTEX_HPP

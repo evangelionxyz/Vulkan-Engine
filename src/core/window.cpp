@@ -44,27 +44,48 @@ bool Window::is_looping() const
     return m_Looping;
 }
 
-void Window::poll_events()
+void Window::poll_events(SDL_Event *event)
 {
-    SDL_Event event;
-    while (SDL_PollEvent(&event))
+    switch (event->type)
     {
-        switch (event.type)
+        case SDL_EVENT_WINDOW_RESIZED:
         {
-            case SDL_EVENT_WINDOW_RESIZED:
-            {
-                m_Data.WindowWidth = event.window.data1;
-                m_Data.WindowHeight = event.window.data2;
+            m_Data.WindowWidth = event->window.data1;
+            m_Data.WindowHeight = event->window.data2;
 
-                    VulkanContext *vk_context = VulkanContext::get();
-                    vk_context->recreate_swap_chain();
-                break;
-            }
-            case SDL_EVENT_QUIT:
+            if (m_WindowResizeCallback)
             {
-                m_Looping = false;
-                break;
+                m_WindowResizeCallback(m_Data.WindowWidth, m_Data.WindowHeight);
             }
+            break;
+        }
+        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+        {
+            m_Data.FbWidth = event->window.data1;
+            m_Data.FbHeight = event->window.data2;
+            if (m_FramebufferResizeCallback)
+            {
+                m_FramebufferResizeCallback(m_Data.FbWidth, m_Data.FbHeight);
+            }
+            
+            VulkanContext *vk_context = VulkanContext::get();
+            vk_context->recreate_swap_chain();
+            break;
+        }
+        case SDL_EVENT_QUIT:
+        {
+            m_Looping = false;
+            break;
         }
     }
+}
+
+void Window::set_window_resize_callback(const std::function<void(uint32_t width, uint32_t height)> &func)
+{
+    m_WindowResizeCallback = func;
+}
+
+void Window::set_framebuffer_resize_callback(const std::function<void(uint32_t width, uint32_t height)> &func)
+{
+    m_FramebufferResizeCallback = func;
 }

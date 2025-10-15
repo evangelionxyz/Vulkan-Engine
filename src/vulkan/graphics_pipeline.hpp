@@ -20,7 +20,7 @@ struct GraphicsPipelineInfo
 
     VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     VkPolygonMode polygon_mode = VK_POLYGON_MODE_FILL;
-    VkCullModeFlags cull_mode = VK_CULL_MODE_BACK_BIT;
+    VkCullModeFlags cull_mode = VK_CULL_MODE_NONE;
     VkFrontFace front_face = VK_FRONT_FACE_CLOCKWISE;
     VkCompareOp depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
     VkColorComponentFlags color_write_mask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;

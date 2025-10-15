@@ -54,7 +54,7 @@ void GraphicsPipeline::build(const GraphicsPipelineInfo& info)
     rasterization_info.depthClampEnable        = VK_FALSE;
     rasterization_info.rasterizerDiscardEnable = VK_FALSE;
     rasterization_info.polygonMode             = info.polygon_mode;
-    rasterization_info.lineWidth               = 1.0f;
+    rasterization_info.lineWidth               = info.line_width;
     rasterization_info.cullMode                = info.cull_mode;
     rasterization_info.frontFace               = info.front_face;
     rasterization_info.depthBiasEnable         = VK_FALSE;
@@ -142,10 +142,6 @@ void GraphicsPipeline::build(const GraphicsPipelineInfo& info)
     };
 
     // Create the new pipeline
-    VkResult result = vkCreateGraphicsPipelines(device,
-        VK_NULL_HANDLE, 1,
-        &pipeline_create_info, VK_NULL_HANDLE, &m_Handle
-    );
-
+    VkResult result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_create_info, VK_NULL_HANDLE, &m_Handle);
     VK_ERROR_CHECK(result,"[Vulkan] Failed to recreate graphics pipeline");
 }

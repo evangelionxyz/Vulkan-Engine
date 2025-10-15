@@ -24,9 +24,23 @@
 Application::Application(i32 argc, char **argv)
 {
     m_Window = CreateScope<Window>(1024, 720, "Vulkan Engine");
+
+    m_Window->set_window_resize_callback([this](uint32_t width, uint32_t height) {
+        on_window_resize(width, height);
+    });
+    m_Window->set_framebuffer_resize_callback([this](uint32_t width, uint32_t height) {
+        on_framebuffer_resize(width, height);
+    });
+
     m_Vk = m_Window->get_vk_context();
 
     m_CommandBuffer = CommandBuffer::create();
+
+    glm::vec2 size = { static_cast<float>(m_Window->get_window_width()), static_cast<float>(m_Window->get_window_height())};
+
+    m_Camera = Camera(45.0f, size.x, size.y);
+    m_Camera.set_position(glm::vec3(0.0f, 0.0f, 5.0f))
+        .update_view_matrix();
 
     create_graphics_pipeline();
 }
@@ -63,9 +77,18 @@ void Application::run()
 {
     imgui_init();
 
+    SDL_Event event;
+
     while (m_Window->is_looping())
     {
-        m_Window->poll_events();
+        while (SDL_PollEvent(&event))
+        {
+            ImGui_ImplSDL3_ProcessEvent(&event);
+            m_Window->poll_events(&event);
+        }
+
+        float delta_time = SDL_GetTicks();
+        on_update(delta_time);
         
         if (auto frame_index = m_Vk->begin_frame())
         {
@@ -83,6 +106,22 @@ void Application::run()
     }
 }
 
+void Application::on_update(float delta_time)
+{
+    m_Camera.update_view_matrix();
+}
+
+void Application::on_window_resize(uint32_t width, uint32_t height)
+{
+}
+
+void Application::on_framebuffer_resize(uint32_t width, uint32_t height)
+{
+    const float w = static_cast<float>(width);
+    const float h = static_cast<float>(height);
+    m_Camera.resize({w, h}).update_projection_matrix();
+}
+
 void Application::create_graphics_pipeline()
 {
     const VkDevice device = m_Vk->get_device();
@@ -92,9 +131,10 @@ void Application::create_graphics_pipeline()
 
     std::vector<Vertex> vertices =
     {
-        {{ -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Position, Color
-        {{ 0.0f,  0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{ 0.5f,  -0.5f}, {0.0f, 0.0f, 1.0f}}
+        // Position, Color (clockwise winding)
+        {{  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
+        {{ -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{  0.0f,  0.5f}, {0.0f, 1.0f, 0.0f}}
     };
 
     VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
@@ -143,6 +183,7 @@ void Application::create_graphics_pipeline()
             }
         }
     };
+
     merge_sets(vertex_shader->get_descriptor_set_layout_bindings());
     merge_sets(fragment_shader->get_descriptor_set_layout_bindings());
 
@@ -188,14 +229,14 @@ void Application::create_graphics_pipeline()
     VkPipelineLayoutCreateInfo layout_create_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         .setLayoutCount = static_cast<u32>(set_layouts.size()),
-        .pSetLayouts = set_layouts.empty() ? nullptr : set_layouts.data(),
+        .pSetLayouts = set_layouts.empty() ? VK_NULL_HANDLE : set_layouts.data(),
         .pushConstantRangeCount = static_cast<u32>(push_ranges.size()),
-        .pPushConstantRanges = push_ranges.empty() ? nullptr : push_ranges.data()
+        .pPushConstantRanges = push_ranges.empty() ? VK_NULL_HANDLE : push_ranges.data()
     };
 
     // create pipeline layout
     VkPipelineLayout pipeline_layout;
-    VkResult result = vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipeline_layout);
+    VkResult result = vkCreatePipelineLayout(device, &layout_create_info, VK_NULL_HANDLE, &pipeline_layout);
     VK_ERROR_CHECK(result, "[Vulkan] Failed to create pipeline layout");
 
     GraphicsPipelineInfo pipeline_info {
@@ -236,6 +277,9 @@ void Application::record_frame(uint32_t frame_index)
 
     m_CommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     VkCommandBuffer command_buffer = m_CommandBuffer->get_active_handle();
+
+    const glm::mat4 &view_projection = m_Camera.get_view_projection_matrix();
+    vkCmdPushConstants(command_buffer, m_Pipeline->get_layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &view_projection);
 
     GraphicsState state;
     state.pipeline = m_Pipeline->get_handle();
@@ -284,8 +328,7 @@ void Application::imgui_init()
     {
         SDL_WindowID win_id = (SDL_WindowID)(intptr_t)viewport->PlatformHandle;
         SDL_Window* sdl_window = SDL_GetWindowFromID(win_id);
-        if (!sdl_window)
-            return 1; // error
+        if (!sdl_window) return 1; // error
         bool ret = SDL_Vulkan_CreateSurface(sdl_window, (VkInstance)vk_instance, (const VkAllocationCallbacks*)vk_allocator, (VkSurfaceKHR*)out_vk_surface);
         return ret ? 0 : 1; // 0 on success as expected by imgui_impl_vulkan
     };

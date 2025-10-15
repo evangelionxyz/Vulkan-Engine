@@ -17,10 +17,10 @@
 #endif
 
 #ifdef VK_DEBUG
-#   define ASSERT(condition, format, ...)\
+#   define ASSERT(condition, ...)\
     do {\
         if (!(condition)) {\
-            Logger::get_instance().push_message(LoggingLevel::Error, "Assertion failed at {} at line {}\n", __FILE__, __LINE__);\
+            Logger::get_instance().push_message(LoggingLevel::Error, "Assertion failed at {} at line {}:\n{}", __FILE__, __LINE__, __VA_ARGS__);\
             DEBUG_BREAK();\
         }\
     } while(0)
