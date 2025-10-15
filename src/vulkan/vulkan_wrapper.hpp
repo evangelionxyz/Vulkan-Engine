@@ -84,7 +84,7 @@ static VkBool32 vk_debug_messenger_callback(
             const auto& obj = pCallbackData->pObjects[i];
             const char* obj_name = obj.pObjectName ? obj.pObjectName : "unnamed";
             Logger::get_instance().push_message(log_level, 
-                "     • Object[{}]: Type={}, Handle={:#x}, Name={}", 
+                "     • Object[{}]: Type={}, Handle={}, Name={}", 
                 i, 
                 static_cast<uint32_t>(obj.objectType),
                 obj.objectHandle,
