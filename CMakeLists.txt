@@ -44,4 +44,4 @@ set(SDL_EXAMPLES OFF)
 set(SDL_TESTS OFF)
 
 add_subdirectory(third_party/sdl3)
-add_subdirectory(src/)
+add_subdirectory(engine)
