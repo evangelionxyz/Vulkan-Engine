@@ -112,14 +112,16 @@ void Application::run()
     Uint64 prevCounter = SDL_GetPerformanceCounter();
     double freq = static_cast<double>(SDL_GetPerformanceFrequency());
     float title_update_interval = 0.0f;
-    SDL_Event event;
 
+    SDL_Event event;
     while (m_Window->is_looping())
     {
+        // Poll all SDL events - this includes events from secondary ImGui viewport windows
         while (SDL_PollEvent(&event))
         {
+            // Always pass ALL events to ImGui first (important for multi-viewport support)
             ImGui_ImplSDL3_ProcessEvent(&event);
-            m_Window->poll_events(&event);
+            m_Window->poll_events(&event);            
         }
 
         Uint64 currCounter = SDL_GetPerformanceCounter();
@@ -396,31 +398,26 @@ void Application::imgui_init()
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+    // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoTaskBarIcons;
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
 
     ImGui::StyleColorsDark();
 
-    ImGuiIO &io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-    io.ConfigViewportsNoDecoration = false;
+    // When viewports are enabled, tweak WindowRounding/WindowBg for platform windows
+    ImGuiStyle& style = ImGui::GetStyle();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
 
     // setup renderer backends
     ImGui_ImplSDL3_InitForVulkan(m_Window->get_native_window());
-
-    // Ensure Platform_CreateVkSurface is set (needed for multi-viewports with Vulkan)
-    // We use SDL3 to create VkSurface for secondary viewports.
-    auto create_vk_surface = [](ImGuiViewport* viewport, ImU64 vk_instance, const void* vk_allocator, ImU64* out_vk_surface) -> int
-    {
-        SDL_WindowID win_id = (SDL_WindowID)(intptr_t)viewport->PlatformHandle;
-        SDL_Window* sdl_window = SDL_GetWindowFromID(win_id);
-        if (!sdl_window) return 1; // error
-        bool ret = SDL_Vulkan_CreateSurface(sdl_window, (VkInstance)vk_instance, (const VkAllocationCallbacks*)vk_allocator, (VkSurfaceKHR*)out_vk_surface);
-        return ret ? 0 : 1; // 0 on success as expected by imgui_impl_vulkan
-    };
-
-    ImGui::GetPlatformIO().Platform_CreateVkSurface = create_vk_surface;
-
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = m_Vk->get_instance();
     init_info.PhysicalDevice = m_Vk->get_physical_device();
@@ -429,19 +426,14 @@ void Application::imgui_init()
     init_info.Queue = m_Vk->get_queue()->get_handle();
     init_info.PipelineCache = VK_NULL_HANDLE;
     init_info.DescriptorPool = m_Vk->get_descriptor_pool();
-    init_info.RenderPass = m_Vk->get_render_pass();
-    init_info.Subpass = 0;
     init_info.MinImageCount = m_Vk->get_swap_chain()->get_min_image_count();
     init_info.ImageCount = m_Vk->get_swap_chain()->get_image_count();
-    init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    init_info.PipelineInfoMain.RenderPass = m_Vk->get_render_pass();
+    init_info.PipelineInfoMain.Subpass = 0;
+    init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     init_info.Allocator = VK_NULL_HANDLE;
     init_info.CheckVkResultFn = VK_NULL_HANDLE;
     ImGui_ImplVulkan_Init(&init_info);
-
-    if (!ImGui_ImplVulkan_CreateFontsTexture())
-    {
-        Logger::get_instance().push_message("[ImGui] Failed to create font texture", LoggingLevel::Error);
-    }
 }
 
 void Application::imgui_begin()

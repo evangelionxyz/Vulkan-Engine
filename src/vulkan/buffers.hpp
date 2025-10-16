@@ -35,8 +35,8 @@ static void copy_data_to_buffer(VkDevice device, VkDeviceMemory buffer_memory, c
 class VulkanBuffer
 {
 public:
-    VulkanBuffer(VkDeviceSize size, VkBufferUsageFlagBits usage);
-    VulkanBuffer(const void *data, VkDeviceSize size, VkBufferUsageFlagBits usage);
+    VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage);
+    VulkanBuffer(const void *data, VkDeviceSize size, VkBufferUsageFlags usage);
     virtual ~VulkanBuffer() {};
 
     void bind_memory(VkDeviceSize offset = 0);

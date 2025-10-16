@@ -13,7 +13,7 @@ public:
     CommandBuffer(uint32_t count = 0);
     ~CommandBuffer();
     
-    void begin(VkCommandBufferUsageFlagBits flags);
+    void begin(VkCommandBufferUsageFlags flags);
     void end();
 
     void destroy();

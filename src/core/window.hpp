@@ -7,8 +7,10 @@
 
 #include "vulkan/vulkan_context.hpp"
 
-#include <glm/glm.hpp>
 #include <atomic>
+#include <string>
+
+#include <glm/glm.hpp>
 
 struct WindowData
 {

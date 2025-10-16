@@ -27,6 +27,8 @@ Window::Window(const i32 width, const i32 height, const char* title)
     m_Data.WindowWidth = width;
     m_Data.WindowHeight = height;
 
+    SDL_SetWindowPosition(m_Window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+
     Logger::get_instance().push_message("[Window] Window created");
     m_Vk = CreateScope<VulkanContext>(this);
 }
@@ -76,11 +78,20 @@ void Window::poll_events(SDL_Event *event)
             VulkanContext::get()->should_recreate_swapchain();
             break;
         }
+        case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+        {
+            if (event->window.windowID == SDL_GetWindowID(m_Window))
+            {
+                m_Looping = false;
+            }
+            break;
+        }
         case SDL_EVENT_QUIT:
         {
             m_Looping = false;
             break;
         }
+
     }
 }
 

@@ -5,7 +5,7 @@
 
 #include "vulkan_context.hpp"
 
-VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlagBits usage)
+VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage)
 {
     const VkDevice device = VulkanContext::get()->get_device();
    
@@ -24,7 +24,7 @@ VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlagBits usage)
     allocate_memory();
 }
 
-VulkanBuffer::VulkanBuffer(const void *data, VkDeviceSize size, VkBufferUsageFlagBits usage)
+VulkanBuffer::VulkanBuffer(const void *data, VkDeviceSize size, VkBufferUsageFlags usage)
 {
     const VkDevice device = VulkanContext::get()->get_device();
    

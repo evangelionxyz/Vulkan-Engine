@@ -24,7 +24,7 @@ CommandBuffer::CommandBuffer(uint32_t count)
     VK_ERROR_CHECK(result, "[Vulkan] Failed to allocate command buffer");
 }
 
-void CommandBuffer::begin(VkCommandBufferUsageFlagBits flags)
+void CommandBuffer::begin(VkCommandBufferUsageFlags flags)
 {
     VkCommandBuffer handle = get_active_handle();
 
